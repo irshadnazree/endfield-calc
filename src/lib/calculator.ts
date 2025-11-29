@@ -145,7 +145,25 @@ export function calculateProductionLine(
   const rawMaterialRequirements = new Map<ItemId, number>();
   let totalPowerConsumption = 0;
 
+  // 收集所有作为生产节点存在的物品ID
+  const producedItemIds = new Set<ItemId>();
+
+  // 第一次遍历：收集所有生产节点的物品ID
+  const collectProducedItems = (node: ProductionNode) => {
+    if (!node.isRawMaterial && node.recipe) {
+      producedItemIds.add(node.item.id);
+    }
+    node.dependencies.forEach(collectProducedItems);
+  };
+  collectProducedItems(rootNode);
+
+  // 第二次遍历：构建 flatList，跳过循环依赖的伪原材料
   const traverse = (node: ProductionNode) => {
+    // 如果是原材料节点，但该物品在生产节点中也存在，则跳过（这是循环依赖产生的伪原材料）
+    if (node.isRawMaterial && producedItemIds.has(node.item.id)) {
+      return;
+    }
+
     flatList.push(node);
     if (node.isRawMaterial) {
       rawMaterialRequirements.set(
