@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useCallback } from "react";
 import {
   Table,
   TableBody,
@@ -40,19 +40,40 @@ type ProductionTableProps = {
   onRecipeChange: (itemId: ItemId, recipeId: RecipeId) => void;
 };
 
-const ProductionTable = memo(function ProductionTable({
-  data,
-  items,
-  onRecipeChange,
-}: ProductionTableProps) {
-  const { t } = useTranslation("production");
+const formatNumber = (num: number, decimals = 2): string => {
+  return num.toFixed(decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+};
 
-  const getItemById = (itemId: ItemId): Item | undefined => {
-    return items.find((item) => item.id === itemId);
-  };
+const ItemIcon = memo(({ item }: { item: Item }) => {
+  const itemName = getItemName(item);
 
-  const formatNumber = (num: number, decimals = 2) => num.toFixed(decimals);
-  const renderRecipeIOCompact = (recipe: Recipe) => {
+  if (item.iconUrl) {
+    return (
+      <img
+        src={item.iconUrl}
+        alt={itemName}
+        className="h-4 w-4 object-contain inline-block"
+      />
+    );
+  }
+
+  return (
+    <span className="inline-block w-4 h-4 bg-muted rounded text-[8px] text-center leading-4">
+      ?
+    </span>
+  );
+});
+
+ItemIcon.displayName = "ItemIcon";
+
+const RecipeIOCompact = memo(
+  ({
+    recipe,
+    getItemById,
+  }: {
+    recipe: Recipe;
+    getItemById: (id: ItemId) => Item | undefined;
+  }) => {
     const maxDisplay = 2;
 
     const renderItems = (
@@ -71,17 +92,7 @@ const ProductionTable = memo(function ProductionTable({
                 key={ri.itemId}
                 className="inline-flex items-center gap-0.5"
               >
-                {item?.iconUrl ? (
-                  <img
-                    src={item.iconUrl}
-                    alt={item ? getItemName(item) : ri.itemId}
-                    className="h-4 w-4 object-contain inline-block"
-                  />
-                ) : (
-                  <span className="inline-block w-4 h-4 bg-muted rounded text-[8px] text-center leading-4">
-                    ?
-                  </span>
-                )}
+                {item && <ItemIcon item={item} />}
                 <span className="text-[11px]">×{ri.amount}</span>
                 {idx < displayed.length - 1 && (
                   <span className="text-muted-foreground mx-0.5">+</span>
@@ -108,9 +119,21 @@ const ProductionTable = memo(function ProductionTable({
         </span>
       </div>
     );
-  };
+  },
+);
 
-  const renderRecipeIOFull = (recipe: Recipe) => {
+RecipeIOCompact.displayName = "RecipeIOCompact";
+
+const RecipeIOFull = memo(
+  ({
+    recipe,
+    getItemById,
+    t,
+  }: {
+    recipe: Recipe;
+    getItemById: (id: ItemId) => Item | undefined;
+    t: (key: string) => string;
+  }) => {
     const renderItems = (
       recipeItems: Array<{ itemId: ItemId; amount: number }>,
     ) => {
@@ -156,30 +179,90 @@ const ProductionTable = memo(function ProductionTable({
         </div>
       </div>
     );
-  };
+  },
+);
+
+RecipeIOFull.displayName = "RecipeIOFull";
+
+const FacilityIcon = memo(
+  ({
+    facility,
+    isRawMaterial,
+  }: {
+    facility: Facility | null;
+    isRawMaterial?: boolean;
+  }) => {
+    if (isRawMaterial || !facility) {
+      return <div className="flex justify-center">-</div>;
+    }
+
+    const facilityName = getFacilityName(facility);
+
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex justify-center cursor-help">
+            {facility.iconUrl ? (
+              <img
+                src={facility.iconUrl}
+                alt={facilityName}
+                className="h-8 w-8 object-contain"
+              />
+            ) : (
+              <div className="h-8 w-8 bg-muted rounded flex items-center justify-center">
+                <span className="text-[10px]">🏭</span>
+              </div>
+            )}
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p className="text-xs">{facilityName}</p>
+        </TooltipContent>
+      </Tooltip>
+    );
+  },
+);
+
+FacilityIcon.displayName = "FacilityIcon";
+
+const ProductionTable = memo(function ProductionTable({
+  data,
+  items,
+  onRecipeChange,
+}: ProductionTableProps) {
+  const { t } = useTranslation("production");
+
+  const getItemById = useCallback(
+    (itemId: ItemId): Item | undefined => {
+      return items.find((item) => item.id === itemId);
+    },
+    [items],
+  );
 
   return (
     <div className="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            <TableHead className="w-[50px] h-9">
+            <TableHead className="w-[48px] h-9">
               {t("table.headers.icon")}
             </TableHead>
-            <TableHead className="h-9">{t("table.headers.item")}</TableHead>
-            <TableHead className="text-right h-9 w-[90px]">
-              {t("table.headers.outputRate")}
+            <TableHead className="h-9 w-[160px]">
+              {t("table.headers.item")}
             </TableHead>
-            <TableHead className="h-9 min-w-[300px]">
+            <TableHead className="h-9 min-w-[400px]">
               {t("table.headers.recipe")}
             </TableHead>
-            <TableHead className="h-9 w-[60px] text-center">
+            <TableHead className="h-9 w-[56px] text-center">
               {t("table.headers.facility")}
             </TableHead>
-            <TableHead className="text-right h-9 w-[70px]">
+            <TableHead className="text-right h-9 w-[90px]">
               {t("table.headers.count")}
             </TableHead>
-            <TableHead className="text-right h-9 w-[80px]">
+            <TableHead className="text-right h-9 w-[100px]">
+              {t("table.headers.outputRate")}
+            </TableHead>
+            <TableHead className="text-right h-9 w-[100px]">
               {t("table.headers.power")}
             </TableHead>
           </TableRow>
@@ -221,13 +304,17 @@ const ProductionTable = memo(function ProductionTable({
                   </TableCell>
 
                   {/* 物品名称 */}
-                  <TableCell className="font-medium text-sm p-2">
-                    {getItemName(line.item)}
-                  </TableCell>
-
-                  {/* 产能 */}
-                  <TableCell className="text-right font-mono text-sm p-2">
-                    {formatNumber(line.outputRate)}
+                  <TableCell className="p-2">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="font-medium text-sm truncate cursor-help">
+                          {getItemName(line.item)}
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="right">
+                        <p className="text-xs">{getItemName(line.item)}</p>
+                      </TooltipContent>
+                    </Tooltip>
                   </TableCell>
 
                   {/* 配方 */}
@@ -245,8 +332,12 @@ const ProductionTable = memo(function ProductionTable({
                       >
                         <SelectTrigger className="h-auto min-h-[32px] text-xs py-1">
                           <SelectValue>
-                            {selectedRecipe &&
-                              renderRecipeIOCompact(selectedRecipe)}
+                            {selectedRecipe && (
+                              <RecipeIOCompact
+                                recipe={selectedRecipe}
+                                getItemById={getItemById}
+                              />
+                            )}
                           </SelectValue>
                         </SelectTrigger>
                         <SelectContent className="max-w-[400px]">
@@ -260,7 +351,11 @@ const ProductionTable = memo(function ProductionTable({
                                 <span className="font-medium text-xs">
                                   {recipe.id}
                                 </span>
-                                {renderRecipeIOFull(recipe)}
+                                <RecipeIOFull
+                                  recipe={recipe}
+                                  getItemById={getItemById}
+                                  t={t}
+                                />
                               </div>
                             </SelectItem>
                           ))}
@@ -270,7 +365,10 @@ const ProductionTable = memo(function ProductionTable({
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <div className="cursor-help">
-                            {renderRecipeIOCompact(selectedRecipe)}
+                            <RecipeIOCompact
+                              recipe={selectedRecipe}
+                              getItemById={getItemById}
+                            />
                           </div>
                         </TooltipTrigger>
                         <TooltipContent side="left" className="max-w-[300px]">
@@ -278,7 +376,11 @@ const ProductionTable = memo(function ProductionTable({
                             <div className="font-medium mb-2">
                               {selectedRecipe.id}
                             </div>
-                            {renderRecipeIOFull(selectedRecipe)}
+                            <RecipeIOFull
+                              recipe={selectedRecipe}
+                              getItemById={getItemById}
+                              t={t}
+                            />
                           </div>
                         </TooltipContent>
                       </Tooltip>
@@ -291,46 +393,43 @@ const ProductionTable = memo(function ProductionTable({
 
                   {/* 设施图标 */}
                   <TableCell className="p-2">
-                    {line.isRawMaterial ? (
-                      <div className="flex justify-center">-</div>
-                    ) : line.facility ? (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="flex justify-center cursor-help">
-                            {line.facility.iconUrl ? (
-                              <img
-                                src={line.facility.iconUrl}
-                                alt={getFacilityName(line.facility)}
-                                className="h-8 w-8 object-contain"
-                              />
-                            ) : (
-                              <div className="h-8 w-8 bg-muted rounded flex items-center justify-center">
-                                <span className="text-[10px]">🏭</span>
-                              </div>
-                            )}
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p className="text-xs">
-                            {getFacilityName(line.facility)}
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    ) : (
-                      <div className="flex justify-center">-</div>
-                    )}
+                    <FacilityIcon
+                      facility={line.facility}
+                      isRawMaterial={line.isRawMaterial}
+                    />
                   </TableCell>
 
                   {/* 机器数量 */}
                   <TableCell className="text-right font-mono text-sm p-2">
-                    {line.isRawMaterial
-                      ? 0
-                      : formatNumber(line.facilityCount, 1)}
+                    {line.isRawMaterial ? (
+                      <span className="text-muted-foreground">-</span>
+                    ) : (
+                      formatNumber(line.facilityCount, 1)
+                    )}
+                  </TableCell>
+
+                  {/* 产能 */}
+                  <TableCell className="text-right font-mono text-sm p-2">
+                    <div className="flex flex-col items-end">
+                      <span>{formatNumber(line.outputRate)}</span>
+                      <span className="text-[10px] text-muted-foreground">
+                        /min
+                      </span>
+                    </div>
                   </TableCell>
 
                   {/* 总功耗 */}
                   <TableCell className="text-right font-mono text-sm p-2">
-                    {line.isRawMaterial ? 0 : formatNumber(totalPower, 0)}
+                    {line.isRawMaterial ? (
+                      <span className="text-muted-foreground">-</span>
+                    ) : (
+                      <div className="flex flex-col items-end">
+                        <span>{formatNumber(totalPower, 0)}</span>
+                        <span className="text-[10px] text-muted-foreground">
+                          MW
+                        </span>
+                      </div>
+                    )}
                   </TableCell>
                 </TableRow>
               );
