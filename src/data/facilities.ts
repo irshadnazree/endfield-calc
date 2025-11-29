@@ -4,7 +4,6 @@ import { FacilityId, RecipeId } from "../types/constants";
 export const facilities: Facility[] = [
   {
     id: FacilityId.GRINDING_UNIT,
-    name: { en: "Grinding Unit" },
     powerConsumption: 20,
     supportedRecipes: [
       RecipeId.GRINDING_UNIT__DENSE_CARBON_POWDER__1,
@@ -19,7 +18,6 @@ export const facilities: Facility[] = [
   },
   {
     id: FacilityId.PACKAGING_UNIT,
-    name: { en: "Packaging Unit" },
     powerConsumption: 30,
     supportedRecipes: [
       RecipeId.PACKAGING_UNIT__LC_BATTERY__1,
@@ -31,7 +29,6 @@ export const facilities: Facility[] = [
   },
   {
     id: FacilityId.SHREDDING_UNIT,
-    name: { en: "Shredding Unit" },
     powerConsumption: 10,
     supportedRecipes: [
       RecipeId.SHREDDING_UNIT__CARBON_POWDER__1,
@@ -50,7 +47,6 @@ export const facilities: Facility[] = [
   },
   {
     id: FacilityId.PLANTING_UNIT,
-    name: { en: "Planting Unit" },
     powerConsumption: 10,
     supportedRecipes: [
       RecipeId.PLANTING_UNIT__AKETINE__1,
@@ -62,7 +58,6 @@ export const facilities: Facility[] = [
   },
   {
     id: FacilityId.FITTING_UNIT,
-    name: { en: "Fitting Unit" },
     powerConsumption: 10,
     supportedRecipes: [
       RecipeId.FITTING_UNIT__CUPRIUM_PART__1,
@@ -75,7 +70,6 @@ export const facilities: Facility[] = [
   },
   {
     id: FacilityId.REACTOR_CRUCIBLE,
-    name: { en: "Reactor Crucible" },
     powerConsumption: 10,
     supportedRecipes: [
       RecipeId.REACTOR_CRUCIBLE__JINCAO_SOLUTION__1,
@@ -85,7 +79,6 @@ export const facilities: Facility[] = [
   },
   {
     id: FacilityId.SEED_PICKING_UNIT,
-    name: { en: "Seed-Picking Unit" },
     powerConsumption: 10,
     supportedRecipes: [
       RecipeId.SEED_PICKING_UNIT__AKETINE_SEED__1,
@@ -103,7 +96,6 @@ export const facilities: Facility[] = [
   },
   {
     id: FacilityId.FILLING_UNIT,
-    name: { en: "Filling Unit" },
     powerConsumption: 10,
     supportedRecipes: [
       RecipeId.FILLING_UNIT__CANNED_CITROME_C__1,
@@ -117,14 +109,12 @@ export const facilities: Facility[] = [
   },
   {
     id: FacilityId.WATER_TREATMENT_UNIT,
-    name: { en: "Water Treatment Unit" },
     powerConsumption: 30,
     supportedRecipes: [],
     tier: 3,
   },
   {
     id: FacilityId.REFINING_UNIT,
-    name: { en: "Refining Unit" },
     powerConsumption: 5,
     supportedRecipes: [
       RecipeId.REFINING_UNIT__STABILIZED_CARBON__1,
@@ -157,7 +147,6 @@ export const facilities: Facility[] = [
   },
   {
     id: FacilityId.MOULDING_UNIT,
-    name: { en: "Moulding Unit" },
     powerConsumption: 10,
     supportedRecipes: [
       RecipeId.MOULDING_UNIT__AMETHYST_BOTTLE__1,
@@ -169,7 +158,6 @@ export const facilities: Facility[] = [
   },
   {
     id: FacilityId.GEARING_UNIT,
-    name: { en: "Gearing Unit" },
     powerConsumption: 10,
     supportedRecipes: [
       RecipeId.GEARING_UNIT__AMETHYST_COMPONENT__1,

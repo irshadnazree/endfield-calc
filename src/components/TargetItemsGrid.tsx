@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { X, Plus } from "lucide-react";
 import type { Item, ItemId } from "@/types";
 import { useTranslation } from "react-i18next";
+import { getItemName } from "@/lib/i18n-helpers";
 
 export type ProductionTarget = {
   itemId: ItemId;
@@ -18,7 +19,6 @@ type TargetItemsGridProps = {
   onTargetRemove: (index: number) => void;
   onAddClick: () => void;
   maxTargets?: number;
-  language?: "en" | "zh-CN" | "zh-TW";
 };
 
 const TargetItemsGrid = memo(function TargetItemsGrid({
@@ -28,14 +28,9 @@ const TargetItemsGrid = memo(function TargetItemsGrid({
   onTargetRemove,
   onAddClick,
   maxTargets = 12,
-  language = "zh-CN",
 }: TargetItemsGridProps) {
   const { t } = useTranslation("targets");
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
-
-  const getItemName = (item: Item) => {
-    return item.name[language] || item.name.en || item.id;
-  };
 
   const getItemById = (itemId: string) => {
     return items.find((i) => i.id === itemId);

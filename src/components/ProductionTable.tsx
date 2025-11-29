@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/tooltip";
 import type { Item, Recipe, Facility, ItemId, RecipeId } from "@/types";
 import { useTranslation } from "react-i18next";
+import { getFacilityName, getItemName } from "@/lib/i18n-helpers";
 
 export type ProductionLineData = {
   item: Item;
@@ -37,26 +38,17 @@ type ProductionTableProps = {
   items: Item[];
   facilities: Facility[];
   onRecipeChange: (itemId: ItemId, recipeId: RecipeId) => void;
-  language?: "en" | "zh-CN" | "zh-TW";
 };
 
 const ProductionTable = memo(function ProductionTable({
   data,
   items,
   onRecipeChange,
-  language = "zh-CN",
 }: ProductionTableProps) {
   const { t } = useTranslation("production");
-  const getItemName = (item: Item) => {
-    return item.name[language] || item.name.en || item.id;
-  };
 
   const getItemById = (itemId: ItemId): Item | undefined => {
     return items.find((item) => item.id === itemId);
-  };
-
-  const getFacilityName = (facility: Facility) => {
-    return facility.name[language] || facility.name.en || facility.id;
   };
 
   const formatNumber = (num: number, decimals = 2) => num.toFixed(decimals);

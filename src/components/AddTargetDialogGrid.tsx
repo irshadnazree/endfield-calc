@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import type { Item, ItemId } from "@/types";
 import { useTranslation } from "react-i18next";
+import { getItemName } from "@/lib/i18n-helpers";
 
 type AddTargetDialogGridProps = {
   open: boolean;
@@ -20,7 +21,6 @@ type AddTargetDialogGridProps = {
   items: Item[];
   existingTargetIds: ItemId[];
   onAddTarget: (itemId: ItemId, rate: number) => void;
-  language?: "en" | "zh-CN" | "zh-TW";
 };
 
 export default function AddTargetDialogGrid({
@@ -29,16 +29,11 @@ export default function AddTargetDialogGrid({
   items,
   existingTargetIds,
   onAddTarget,
-  language = "zh-CN",
 }: AddTargetDialogGridProps) {
   const { t } = useTranslation("dialog");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedItemId, setSelectedItemId] = useState<ItemId | null>(null);
   const [defaultRate, setDefaultRate] = useState(10);
-
-  const getItemName = (item: Item) => {
-    return item.name[language] || item.name.en || item.id;
-  };
 
   const availableItems = items.filter(
     (item) => !existingTargetIds.includes(item.id),

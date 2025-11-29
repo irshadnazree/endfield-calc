@@ -277,7 +277,6 @@ export function calculateMultipleTargets(
   const rootNode: ProductionNode = {
     item: {
       id: "__multi_target__" as ItemId,
-      name: { en: "Multiple Targets" },
       tier: 0,
     },
     targetRate: 0,

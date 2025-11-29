@@ -146,7 +146,6 @@ export default function App() {
             onTargetChange={handleTargetChange}
             onTargetRemove={handleTargetRemove}
             onAddClick={handleAddClick}
-            language={i18n.language as "en" | "zh-CN" | "zh-TW"}
           />
 
           {/* 右侧面板 */}
@@ -163,7 +162,6 @@ export default function App() {
                   items={items}
                   facilities={facilities}
                   onRecipeChange={handleRecipeChange}
-                  language={i18n.language as "en" | "zh-CN" | "zh-TW"}
                 />
               </CardContent>
             </Card>
@@ -176,7 +174,6 @@ export default function App() {
           items={items}
           existingTargetIds={targets.map((t) => t.itemId)}
           onAddTarget={handleAddTarget}
-          language={i18n.language as "en" | "zh-CN" | "zh-TW"}
         />
       </div>
     </TooltipProvider>

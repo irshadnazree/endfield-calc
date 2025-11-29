@@ -15,7 +15,6 @@ type LeftPanelProps = {
   onTargetChange: (index: number, rate: number) => void;
   onTargetRemove: (index: number) => void;
   onAddClick: () => void;
-  language?: "en" | "zh-CN" | "zh-TW";
 };
 
 const LeftPanel = memo(function LeftPanel({
@@ -28,7 +27,6 @@ const LeftPanel = memo(function LeftPanel({
   onTargetChange,
   onTargetRemove,
   onAddClick,
-  language = "zh-CN",
 }: LeftPanelProps) {
   const { t } = useTranslation("targets");
   return (
@@ -49,7 +47,6 @@ const LeftPanel = memo(function LeftPanel({
             onTargetChange={onTargetChange}
             onTargetRemove={onTargetRemove}
             onAddClick={onAddClick}
-            language={language}
           />
         </CardContent>
       </Card>
