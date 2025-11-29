@@ -1,9 +1,9 @@
+import { memo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { X, Plus } from "lucide-react";
 import type { Item, ItemId } from "@/types";
-import { useState } from "react";
 
 export type ProductionTarget = {
   itemId: ItemId;
@@ -20,7 +20,7 @@ type TargetItemsGridProps = {
   language?: "en" | "zh-CN" | "zh-TW";
 };
 
-export default function TargetItemsGrid({
+const TargetItemsGrid = memo(function TargetItemsGrid({
   targets,
   items,
   onTargetChange,
@@ -127,4 +127,6 @@ export default function TargetItemsGrid({
       )}
     </div>
   );
-}
+});
+
+export default TargetItemsGrid;

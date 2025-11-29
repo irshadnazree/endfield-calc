@@ -1,3 +1,4 @@
+import { memo } from "react";
 import {
   Table,
   TableBody,
@@ -16,7 +17,6 @@ import {
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { Item, Recipe, Facility, ItemId, RecipeId } from "@/types";
@@ -39,7 +39,7 @@ type ProductionTableProps = {
   language?: "en" | "zh-CN" | "zh-TW";
 };
 
-export default function ProductionTable({
+const ProductionTable = memo(function ProductionTable({
   data,
   items,
   onRecipeChange,
@@ -162,177 +162,175 @@ export default function ProductionTable({
   };
 
   return (
-    <TooltipProvider>
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="w-[50px] h-9">图标</TableHead>
-              <TableHead className="h-9">物品</TableHead>
-              <TableHead className="text-right h-9 w-[90px]">产能/分</TableHead>
-              <TableHead className="h-9 min-w-[300px]">配方</TableHead>
-              <TableHead className="h-9 w-[60px] text-center">设施</TableHead>
-              <TableHead className="text-right h-9 w-[70px]">数量</TableHead>
-              <TableHead className="text-right h-9 w-[80px]">
-                功耗(kW)
-              </TableHead>
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            <TableHead className="w-[50px] h-9">图标</TableHead>
+            <TableHead className="h-9">物品</TableHead>
+            <TableHead className="text-right h-9 w-[90px]">产能/分</TableHead>
+            <TableHead className="h-9 min-w-[300px]">配方</TableHead>
+            <TableHead className="h-9 w-[60px] text-center">设施</TableHead>
+            <TableHead className="text-right h-9 w-[70px]">数量</TableHead>
+            <TableHead className="text-right h-9 w-[80px]">功耗(kW)</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {data.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={7}
+                className="text-center text-muted-foreground h-32"
+              >
+                暂无数据
+              </TableCell>
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={7}
-                  className="text-center text-muted-foreground h-32"
-                >
-                  暂无数据
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.map((line) => {
-                const selectedRecipe = line.availableRecipes.find(
-                  (r) => r.id === line.selectedRecipeId,
-                );
-                const totalPower = line.facility?.powerConsumption
-                  ? line.facility.powerConsumption * line.facilityCount
-                  : 0;
+          ) : (
+            data.map((line) => {
+              const selectedRecipe = line.availableRecipes.find(
+                (r) => r.id === line.selectedRecipeId,
+              );
+              const totalPower = line.facility?.powerConsumption
+                ? line.facility.powerConsumption * line.facilityCount
+                : 0;
 
-                return (
-                  <TableRow key={line.item.id} className="h-12">
-                    {/* 图标 */}
-                    <TableCell className="p-2">
-                      {line.item.iconUrl ? (
-                        <img
-                          src={line.item.iconUrl}
-                          alt={getItemName(line.item)}
-                          className="h-8 w-8 object-contain"
-                        />
-                      ) : (
-                        <div className="h-8 w-8 bg-muted rounded flex items-center justify-center">
-                          <span className="text-[10px]">📦</span>
-                        </div>
-                      )}
-                    </TableCell>
+              return (
+                <TableRow key={line.item.id} className="h-12">
+                  {/* 图标 */}
+                  <TableCell className="p-2">
+                    {line.item.iconUrl ? (
+                      <img
+                        src={line.item.iconUrl}
+                        alt={getItemName(line.item)}
+                        className="h-8 w-8 object-contain"
+                      />
+                    ) : (
+                      <div className="h-8 w-8 bg-muted rounded flex items-center justify-center">
+                        <span className="text-[10px]">📦</span>
+                      </div>
+                    )}
+                  </TableCell>
 
-                    {/* 物品名称 */}
-                    <TableCell className="font-medium text-sm p-2">
-                      {getItemName(line.item)}
-                    </TableCell>
+                  {/* 物品名称 */}
+                  <TableCell className="font-medium text-sm p-2">
+                    {getItemName(line.item)}
+                  </TableCell>
 
-                    {/* 产能 */}
-                    <TableCell className="text-right font-mono text-sm p-2">
-                      {formatNumber(line.outputRate)}
-                    </TableCell>
+                  {/* 产能 */}
+                  <TableCell className="text-right font-mono text-sm p-2">
+                    {formatNumber(line.outputRate)}
+                  </TableCell>
 
-                    {/* 配方 */}
-                    <TableCell className="p-2">
-                      {line.isRawMaterial ? (
-                        <div className="text-xs text-muted-foreground">
-                          原材料
-                        </div>
-                      ) : line.availableRecipes.length > 1 ? (
-                        <Select
-                          value={line.selectedRecipeId}
-                          onValueChange={(value: RecipeId) =>
-                            onRecipeChange(line.item.id, value)
-                          }
-                        >
-                          <SelectTrigger className="h-auto min-h-[32px] text-xs py-1">
-                            <SelectValue>
-                              {selectedRecipe &&
-                                renderRecipeIOCompact(selectedRecipe)}
-                            </SelectValue>
-                          </SelectTrigger>
-                          <SelectContent className="max-w-[400px]">
-                            {line.availableRecipes.map((recipe) => (
-                              <SelectItem
-                                key={recipe.id}
-                                value={recipe.id}
-                                className="text-xs"
-                              >
-                                <div className="flex flex-col gap-1 py-1">
-                                  <span className="font-medium text-xs">
-                                    {recipe.id}
-                                  </span>
-                                  {renderRecipeIOFull(recipe)}
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : selectedRecipe ? (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="cursor-help">
-                              {renderRecipeIOCompact(selectedRecipe)}
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent side="left" className="max-w-[300px]">
-                            <div className="text-xs">
-                              <div className="font-medium mb-2">
-                                {selectedRecipe.id}
+                  {/* 配方 */}
+                  <TableCell className="p-2">
+                    {line.isRawMaterial ? (
+                      <div className="text-xs text-muted-foreground">
+                        原材料
+                      </div>
+                    ) : line.availableRecipes.length > 1 ? (
+                      <Select
+                        value={line.selectedRecipeId}
+                        onValueChange={(value: RecipeId) =>
+                          onRecipeChange(line.item.id, value)
+                        }
+                      >
+                        <SelectTrigger className="h-auto min-h-[32px] text-xs py-1">
+                          <SelectValue>
+                            {selectedRecipe &&
+                              renderRecipeIOCompact(selectedRecipe)}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent className="max-w-[400px]">
+                          {line.availableRecipes.map((recipe) => (
+                            <SelectItem
+                              key={recipe.id}
+                              value={recipe.id}
+                              className="text-xs"
+                            >
+                              <div className="flex flex-col gap-1 py-1">
+                                <span className="font-medium text-xs">
+                                  {recipe.id}
+                                </span>
+                                {renderRecipeIOFull(recipe)}
                               </div>
-                              {renderRecipeIOFull(selectedRecipe)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : selectedRecipe ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="cursor-help">
+                            {renderRecipeIOCompact(selectedRecipe)}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="left" className="max-w-[300px]">
+                          <div className="text-xs">
+                            <div className="font-medium mb-2">
+                              {selectedRecipe.id}
                             </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      ) : (
-                        <div className="text-xs text-muted-foreground">
-                          无配方
-                        </div>
-                      )}
-                    </TableCell>
+                            {renderRecipeIOFull(selectedRecipe)}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <div className="text-xs text-muted-foreground">
+                        无配方
+                      </div>
+                    )}
+                  </TableCell>
 
-                    {/* 设施图标 */}
-                    <TableCell className="p-2">
-                      {line.isRawMaterial ? (
-                        <div className="flex justify-center">-</div>
-                      ) : line.facility ? (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex justify-center cursor-help">
-                              {line.facility.iconUrl ? (
-                                <img
-                                  src={line.facility.iconUrl}
-                                  alt={getFacilityName(line.facility)}
-                                  className="h-8 w-8 object-contain"
-                                />
-                              ) : (
-                                <div className="h-8 w-8 bg-muted rounded flex items-center justify-center">
-                                  <span className="text-[10px]">🏭</span>
-                                </div>
-                              )}
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="text-xs">
-                              {getFacilityName(line.facility)}
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      ) : (
-                        <div className="flex justify-center">-</div>
-                      )}
-                    </TableCell>
+                  {/* 设施图标 */}
+                  <TableCell className="p-2">
+                    {line.isRawMaterial ? (
+                      <div className="flex justify-center">-</div>
+                    ) : line.facility ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex justify-center cursor-help">
+                            {line.facility.iconUrl ? (
+                              <img
+                                src={line.facility.iconUrl}
+                                alt={getFacilityName(line.facility)}
+                                className="h-8 w-8 object-contain"
+                              />
+                            ) : (
+                              <div className="h-8 w-8 bg-muted rounded flex items-center justify-center">
+                                <span className="text-[10px]">🏭</span>
+                              </div>
+                            )}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-xs">
+                            {getFacilityName(line.facility)}
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <div className="flex justify-center">-</div>
+                    )}
+                  </TableCell>
 
-                    {/* 机器数量 */}
-                    <TableCell className="text-right font-mono text-sm p-2">
-                      {line.isRawMaterial
-                        ? 0
-                        : formatNumber(line.facilityCount, 1)}
-                    </TableCell>
+                  {/* 机器数量 */}
+                  <TableCell className="text-right font-mono text-sm p-2">
+                    {line.isRawMaterial
+                      ? 0
+                      : formatNumber(line.facilityCount, 1)}
+                  </TableCell>
 
-                    {/* 总功耗 */}
-                    <TableCell className="text-right font-mono text-sm p-2">
-                      {line.isRawMaterial ? 0 : formatNumber(totalPower, 0)}
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
-    </TooltipProvider>
+                  {/* 总功耗 */}
+                  <TableCell className="text-right font-mono text-sm p-2">
+                    {line.isRawMaterial ? 0 : formatNumber(totalPower, 0)}
+                  </TableCell>
+                </TableRow>
+              );
+            })
+          )}
+        </TableBody>
+      </Table>
+    </div>
   );
-}
+});
+
+export default ProductionTable;
