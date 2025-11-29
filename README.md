@@ -1,65 +1,48 @@
-# Endfield Tools - Production Calculator
+# Endfield Tool — Production Calculator for “Arknights: Endfield”
 
-This is a production calculator tool designed for players of "Arknights: Endfield". It aims to help players plan and optimize in-game resource production, including facility construction, item crafting, and recipe management.
+[中文](./README_zh.md)
+
+## What is this 🎮
+
+Endfield Tool is a production‑planning and facility‑calculator web app for players of "Arknights: Endfield".  
+It helps you plan and optimize resource production: building facilities, crafting items, managing recipes, and calculating required raw materials and production time.
 
 ## Features
 
-*   **Facility Management**: View and manage various production facilities in the game.
-*   **Items and Recipes**: Browse all craftable items and their corresponding recipes.
-*   **Production Planning**: Automatically calculate required raw materials and production steps based on target items.
-*   **Visual Interface**: An intuitive user interface for simulating and adjusting production chains.
+- **Facility Management**: view and manage different production facilities.
+- **Items & Recipes**: browse craftable items and their recipes.
+- **Production Planning**: calculate raw materials and production chains for target items.
+- **Intuitive UI**: interactive interface to adjust production quantities and automatically recalculate requirements.
 
-## Tech Stack
+## Install & Run
 
-*   **Frontend**: React, TypeScript, Vite
-*   **UI Components**: Shadcn/ui (inferred from `components.json` and `src/components/ui`)
-*   **Styling**: CSS (inferred from `index.css`)
-
-## Installation and Running
-
-### Prerequisites
-
-*   Node.js (LTS version recommended)
-*   pnpm (or npm/yarn)
-
-### Steps
-
-1.  **Clone the repository**:
-    ```bash
-    git clone https://github.com/your-username/endfield-tools.git
-    cd endfield-tools
-    ```
-    (Note: Assuming a GitHub repo, replace `your-username` with actual if known, or remove if not applicable)
-
-2.  **Install dependencies**:
-    ```bash
-    pnpm install
-    ```
-
-3.  **Run the development server**:
-    ```bash
-    pnpm dev
-    ```
-    The project will run on a local development server, usually `http://localhost:5173`.
-
-4.  **Build for production**:
-    ```bash
-    pnpm build
-    ```
-    This will generate production-ready static files in the `dist/` directory.
+```bash
+git clone https://github.com/JamboChen/endfield-tool.git
+cd endfield-tool
+pnpm install
+pnpm dev
+pnpm build
+```
 
 ## Usage
 
-After starting the application, you can use the intuitive interface to:
-
-1.  Select the target items you wish to produce.
-2.  View the facilities, raw materials, and production time required for those items.
-3.  Adjust production quantities, and the tool will automatically update resource requirements.
+1. Start the app.
+2. Select target items to produce.
+3. See required facilities, raw materials, and production time.
+4. Adjust quantities to re‑calculate resources.
 
 ## Contributing
 
-Community contributions are welcome! If you have any suggestions for improvement or find bugs, please feel free to submit an Issue or Pull Request.
+Contributions are welcome! Feel free to open issues or pull requests if you find bugs or have improvement suggestions.
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+MIT
+
+---
+
+## Data Source & Disclaimer
+
+- **Data Source**: All item, recipe, and facility data is sourced from [endfield.wiki.gg](https://endfield.wiki.gg).
+- **No Guarantee of Accuracy**: I do **not** have official game-test access. The tool’s outputs are based solely on wiki data and should be considered **estimates only**.
+  Use at your own discretion.
