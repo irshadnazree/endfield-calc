@@ -1,4 +1,4 @@
-import { Handle, type NodeProps, Position } from "@xyflow/react";
+import { Handle, type NodeProps, type Node, Position } from "@xyflow/react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Tooltip,
@@ -23,6 +23,7 @@ export interface FlowNodeData {
   [key: string]: unknown;
 }
 
+export type FlowProductionNode = Node<FlowNodeData>;
 /**
  * Formats a number to a fixed number of decimal places.
  * @param num The number to format.
@@ -43,8 +44,8 @@ export default function CustomProductionNode({
   data,
   sourcePosition = Position.Right, // Default source handle position
   targetPosition = Position.Left, // Default target handle position
-}: NodeProps<FlowNodeData>) {
-  const { productionNode: node, isCircular, items, facilities } = data;
+}: NodeProps<FlowProductionNode>) {
+  const { productionNode: node, isCircular, items } = data;
   const { t } = useTranslation("production");
 
   /**
@@ -121,7 +122,7 @@ export default function CustomProductionNode({
           {/* Target handle for incoming connections */}
           <Handle
             type="target"
-            position={targetPosition}
+            position={targetPosition as Position}
             isConnectable={false} // Not connectable by user interaction
           />
           <CardContent className="p-3 text-xs">
@@ -171,7 +172,7 @@ export default function CustomProductionNode({
           {/* Source handle for outgoing connections */}
           <Handle
             type="source"
-            position={sourcePosition}
+            position={sourcePosition as Position}
             isConnectable={false} // Not connectable by user interaction
           />
         </Card>

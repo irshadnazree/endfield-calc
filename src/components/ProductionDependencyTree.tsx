@@ -17,6 +17,7 @@ import type { Item, Facility } from "@/types";
 import type { UnifiedProductionPlan, ProductionNode } from "@/lib/calculator";
 import CustomProductionNode, {
   type FlowNodeData,
+  type FlowProductionNode,
 } from "./CustomProductionNode";
 import { useTranslation } from "react-i18next";
 import { getLayoutedElements } from "./layoutUtils";
@@ -47,7 +48,7 @@ const mapPlanToFlow = (
   rootNodes: ProductionNode[],
   items: Item[],
   facilities: Facility[],
-): { nodes: Node<FlowNodeData>[]; edges: Edge[] } => {
+): { nodes: FlowProductionNode[]; edges: Edge[] } => {
   const nodes: Node<FlowNodeData>[] = [];
   const edges: Edge[] = [];
   const nodeKeyToId = new Map<string, string>();
@@ -159,9 +160,8 @@ const mapPlanToFlow = (
     const fixedMarkerSize = 8; // Define fixed arrow size
 
     edges.forEach((edge) => {
-      const flowRate = (edge.data as any)?.flowRate ?? 0; // Type assertion for flowRate
-
-      // Calculate normalized flow (0 to 1)
+      const flowRate =
+        (edge.data as { flowRate?: number } | undefined)?.flowRate ?? 0;
       const normalizedFlow = (flowRate - minFlow) / flowRange;
 
       // 1. Non-linear width mapping (using square root for smoother transition)
@@ -209,7 +209,10 @@ const mapPlanToFlow = (
     });
   }
 
-  return { nodes: nodes as Node<FlowNodeData>[], edges };
+  return {
+    nodes: nodes as FlowProductionNode[],
+    edges,
+  };
 };
 
 /**
@@ -236,23 +239,25 @@ export default function ProductionDependencyTree({
 
   const { initialNodes, initialEdges } = useMemo(() => {
     if (!plan || plan.dependencyRootNodes.length === 0) {
-      return { initialNodes: [], initialEdges: [] };
+      return { initialNodes: [] as FlowProductionNode[], initialEdges: [] };
     }
-
     const flowData = mapPlanToFlow(plan.dependencyRootNodes, items, facilities);
 
     // Apply layout algorithm to position nodes
     const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
       flowData.nodes,
       flowData.edges,
-      "LR", // Layout direction: Left to Right
+      "LR",
     );
-
-    return { initialNodes: layoutedNodes, initialEdges: layoutedEdges };
-  }, [plan, items, facilities]); // Recalculate if plan, items, or facilities change
-
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+    return {
+      initialNodes: layoutedNodes as FlowProductionNode[],
+      initialEdges: layoutedEdges,
+    };
+  }, [plan, items, facilities]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<FlowProductionNode>(
+    [],
+  );
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
   // Update React Flow's internal state when initial nodes/edges change
   useEffect(() => {
@@ -263,7 +268,7 @@ export default function ProductionDependencyTree({
   // Define custom node types for React Flow
   const nodeTypes: NodeTypes = useMemo(
     () => ({
-      productionNode: CustomProductionNode as any, // Cast to any to bypass strict type checking for now
+      productionNode: CustomProductionNode,
     }),
     [],
   );
