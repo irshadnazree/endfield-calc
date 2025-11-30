@@ -17,5 +17,16 @@
     "noData": "暂无数据",
     "noRecipe": "无配方",
     "rawMaterial": "原材料"
+  },
+  "tree": {
+    "circularRawMaterial": "循环依赖原料",
+    "circularWarning": "生产循环警告",
+    "facility": "设施",
+    "item": "物品",
+    "noTarget": "尚未设置目标产出。请设置目标以查看依赖树。",
+    "power": "电力",
+    "produced": "产出",
+    "required": "需求",
+    "trueRawMaterial": "纯净原料"
   }
 }

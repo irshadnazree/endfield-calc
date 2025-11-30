@@ -1,4 +1,8 @@
 {
-  "productionConfig": "Production Configuration",
+  "calculationError": "An error occurred during production plan calculation. Please check your targets and recipe overrides.",
+  "tabs": {
+    "table": "Production Table",
+    "tree": "Dependency Tree"
+  },
   "title": "Endfield Factory Production Calculator"
 }

@@ -1,4 +1,8 @@
 {
-  "productionConfig": "生产线配置",
+  "calculationError": "计算生产计划时发生错误。请检查您的目标产出和配方覆盖设置。",
+  "tabs": {
+    "table": "生产列表",
+    "tree": "依赖关系图"
+  },
   "title": "終末地工厂生产计算器"
 }

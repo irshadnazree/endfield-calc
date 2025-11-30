@@ -439,3 +439,4 @@ const ProductionTable = memo(function ProductionTable({
 });
 
 export default ProductionTable;
+export { ItemIcon, RecipeIOFull };

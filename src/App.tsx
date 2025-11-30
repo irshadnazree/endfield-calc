@@ -5,10 +5,12 @@ import {
 import { items, recipes, facilities } from "./data";
 import { useState, useMemo, useCallback } from "react";
 import ProductionTable from "./components/ProductionTable";
+import ProductionDependencyTree from "./components/ProductionDependencyTree";
 import type { ProductionTarget } from "./components/TargetItemsGrid";
 import AddTargetDialogGrid from "./components/AddTargetDialogGrid";
 import LeftPanel from "./components/LeftPanel";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import {
   Select,
@@ -27,15 +29,16 @@ export default function App() {
   const handleLanguageChange = (lang: string) => {
     i18n.changeLanguage(lang);
   };
+
   const [targets, setTargets] = useState<ProductionTarget[]>([]);
   const [recipeOverrides, setRecipeOverrides] = useState<Map<ItemId, RecipeId>>(
     new Map(),
   );
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"table" | "tree">("table");
 
   const { plan, tableData, error } = useMemo(() => {
-    // 声明 plan 的类型为新的 UnifiedProductionPlan
-    let plan: UnifiedProductionPlan | null = null; // 👈 改变这里的类型
+    let plan: UnifiedProductionPlan | null = null;
     let tableData: ProductionLineData[] = [];
     let error: string | null = null;
 
@@ -106,11 +109,11 @@ export default function App() {
   return (
     <TooltipProvider>
       <div className="h-screen flex flex-col p-4 gap-4">
-        {/* 顶部标题栏 */}
+        {/* Top title bar */}
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">{t("title")}</h1>
           <div className="flex items-center gap-4">
-            {/* 语言切换按钮 */}
+            {/* Language selector */}
             <Select value={i18n.language} onValueChange={handleLanguageChange}>
               <SelectTrigger className="w-[120px] h-9">
                 <SelectValue />
@@ -131,6 +134,7 @@ export default function App() {
                 height="16"
                 width="16"
                 src="https://cdn.simpleicons.org/github/181717"
+                alt="GitHub"
               />
               <span>GitHub</span>
             </a>
@@ -138,7 +142,7 @@ export default function App() {
         </div>
 
         <div className="flex-1 flex gap-4 min-h-0">
-          {/* 左侧面板 */}
+          {/* Left panel */}
           <LeftPanel
             targets={targets}
             items={items}
@@ -151,21 +155,47 @@ export default function App() {
             onAddClick={handleAddClick}
           />
 
-          {/* 右侧面板 */}
+          {/* Right panel with tabs */}
           <div className="flex-1 min-w-0">
             <Card className="h-full flex flex-col">
               <CardHeader className="pb-3 shrink-0">
-                <CardTitle className="text-base">
-                  {t("productionConfig")}
-                </CardTitle>
+                <Tabs
+                  value={activeTab}
+                  onValueChange={(val) => setActiveTab(val as "table" | "tree")}
+                  className="w-full"
+                >
+                  <TabsList className="grid w-full max-w-md grid-cols-2">
+                    <TabsTrigger value="table" className="gap-2">
+                      <span className="text-base">📊</span>
+                      <span>{t("tabs.table")}</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="tree" className="gap-2">
+                      <span className="text-base">🌳</span>
+                      <span>{t("tabs.tree")}</span>
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
               </CardHeader>
-              <CardContent className="flex-1 min-h-0 overflow-auto">
-                <ProductionTable
-                  data={tableData}
-                  items={items}
-                  facilities={facilities}
-                  onRecipeChange={handleRecipeChange}
-                />
+              <CardContent className="flex-1 min-h-0 overflow-hidden p-0">
+                <Tabs value={activeTab} className="h-full">
+                  <TabsContent value="table" className="h-full m-0 p-4 pt-0">
+                    <div className="h-full overflow-auto">
+                      <ProductionTable
+                        data={tableData}
+                        items={items}
+                        facilities={facilities}
+                        onRecipeChange={handleRecipeChange}
+                      />
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="tree" className="h-full m-0">
+                    <ProductionDependencyTree
+                      plan={plan}
+                      items={items}
+                      facilities={facilities}
+                    />
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
           </div>

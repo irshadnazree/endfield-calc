@@ -17,5 +17,16 @@
     "noData": "No Data",
     "noRecipe": "No Recipe",
     "rawMaterial": "Raw Material"
+  },
+  "tree": {
+    "circularRawMaterial": "Circular dependency raw material",
+    "circularWarning": "Circular Production Warning",
+    "facility": "Facility",
+    "item": "Item",
+    "noTarget": "No target output defined yet. Please set a target to view the dependency tree.",
+    "power": "Power",
+    "produced": "Produced",
+    "required": "Required",
+    "trueRawMaterial": "True Raw Material"
   }
 }

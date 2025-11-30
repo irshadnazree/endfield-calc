@@ -17,5 +17,16 @@
     "noData": "暫無數據",
     "noRecipe": "無配方",
     "rawMaterial": "原材料"
+  },
+  "tree": {
+    "circularRawMaterial": "循環依賴原料",
+    "circularWarning": "生產循環警告",
+    "facility": "設施",
+    "item": "物品",
+    "noTarget": "尚未設定目標產出。請設定目標以檢視依賴樹。",
+    "power": "電力",
+    "produced": "產出",
+    "required": "需求",
+    "trueRawMaterial": "純淨原料"
   }
 }
