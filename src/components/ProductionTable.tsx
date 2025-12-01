@@ -31,6 +31,7 @@ export type ProductionLineData = {
   facility: Facility | null;
   facilityCount: number;
   isRawMaterial?: boolean;
+  isTarget?: boolean;
 };
 
 type ProductionTableProps = {
@@ -286,7 +287,14 @@ const ProductionTable = memo(function ProductionTable({
                 : 0;
 
               return (
-                <TableRow key={line.item.id} className="h-12">
+                <TableRow
+                  key={line.item.id}
+                  className={
+                    line.isTarget
+                      ? "h-12 bg-amber-50/50 dark:bg-amber-900/10 hover:bg-amber-100/70 dark:hover:bg-amber-900/30 border-l-4 border-amber-500"
+                      : "h-12"
+                  }
+                >
                   {/* 图标 */}
                   <TableCell className="p-2">
                     {line.item.iconUrl ? (
