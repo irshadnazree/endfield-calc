@@ -1,8 +1,13 @@
 import { Position, MarkerType } from "@xyflow/react";
 import type { Node, Edge } from "@xyflow/react";
-import type { Item, Facility } from "@/types";
+import type { Item, Facility, ItemId } from "@/types";
 import type { ProductionNode } from "@/lib/calculator";
-import type { FlowProductionNode, FlowNodeDataSeparated } from "./types";
+import type {
+  FlowProductionNode,
+  FlowNodeDataSeparated,
+  FlowNodeDataSeparatedWithTarget,
+  FlowTargetNode,
+} from "./types";
 import { CapacityPoolManager } from "./capacity-pool";
 import { applyEdgeStyling } from "./edge-styling";
 
@@ -23,24 +28,49 @@ const createFlowNodeKey = (node: ProductionNode): string => {
 };
 
 /**
- * Collects all unique production nodes from the dependency tree.
+ * Aggregated production node data for separated mode.
+ * Combines multiple occurrences of the same production step.
+ */
+type AggregatedProductionData = {
+  /** Representative ProductionNode (from first encounter) */
+  node: ProductionNode;
+  /** Total production rate across all branches */
+  totalRate: number;
+  /** Total facility count across all branches */
+  totalFacilityCount: number;
+};
+
+/**
+ * Collects all unique production nodes from the dependency tree and aggregates their requirements.
  *
  * Traverses the tree and deduplicates nodes based on their key,
- * keeping only the first encountered instance of each unique production step.
+ * while summing up rates for nodes that appear in multiple branches.
  *
  * @param rootNodes Root nodes of the dependency tree
- * @returns Map of node keys to their representative ProductionNode
+ * @returns Map of node keys to their aggregated production data
  */
 function collectUniqueNodes(
   rootNodes: ProductionNode[],
-): Map<string, ProductionNode> {
-  const nodeMap = new Map<string, ProductionNode>();
+): Map<string, AggregatedProductionData> {
+  const nodeMap = new Map<string, AggregatedProductionData>();
 
   const collect = (node: ProductionNode) => {
     const key = createFlowNodeKey(node);
-    if (!nodeMap.has(key)) {
-      nodeMap.set(key, node);
+    const existing = nodeMap.get(key);
+
+    if (existing) {
+      // Aggregate rates from multiple occurrences
+      existing.totalRate += node.targetRate;
+      existing.totalFacilityCount += node.facilityCount;
+    } else {
+      // First encounter: create new entry
+      nodeMap.set(key, {
+        node,
+        totalRate: node.targetRate,
+        totalFacilityCount: node.facilityCount,
+      });
     }
+
     node.dependencies.forEach(collect);
   };
 
@@ -54,10 +84,12 @@ function collectUniqueNodes(
  * Returns nodes in dependency order (producers before consumers), ensuring that
  * when we allocate capacity, all upstream producers are already initialized.
  *
- * @param nodeMap Map of unique production nodes
+ * @param nodeMap Map of aggregated production data
  * @returns Array of node keys in topological order (leaves to roots)
  */
-function topologicalSort(nodeMap: Map<string, ProductionNode>): string[] {
+function topologicalSort(
+  nodeMap: Map<string, AggregatedProductionData>,
+): string[] {
   const inDegree = new Map<string, number>();
   const adjList = new Map<string, Set<string>>();
 
@@ -68,8 +100,8 @@ function topologicalSort(nodeMap: Map<string, ProductionNode>): string[] {
   });
 
   // Build adjacency list and calculate in-degrees
-  nodeMap.forEach((node, key) => {
-    node.dependencies.forEach((dep) => {
+  nodeMap.forEach((data, key) => {
+    data.node.dependencies.forEach((dep) => {
       const depKey = createFlowNodeKey(dep);
       if (nodeMap.has(depKey)) {
         adjList.get(depKey)!.add(key);
@@ -117,44 +149,83 @@ function topologicalSort(nodeMap: Map<string, ProductionNode>): string[] {
  * 2. Creates capacity pools for each unique production step
  * 3. Generates individual facility nodes
  * 4. Allocates capacity and creates edges using demand-driven allocation
+ * 5. Creates target sink nodes for user-defined goals
  *
  * @param rootNodes The root ProductionNodes of the dependency tree
  * @param items All available items in the game
  * @param facilities All available facilities in the game
+ * @param originalTargets Original user-defined production targets (optional)
  * @returns An object containing the generated React Flow nodes and edges
  */
 export function mapPlanToFlowSeparated(
   rootNodes: ProductionNode[],
   items: Item[],
   facilities: Facility[],
-): { nodes: FlowProductionNode[]; edges: Edge[] } {
-  // Step 1: Collect unique nodes and determine processing order
+  originalTargets?: Array<{ itemId: ItemId; rate: number }>,
+): { nodes: (FlowProductionNode | FlowTargetNode)[]; edges: Edge[] } {
+  // Step 1: Collect unique nodes with aggregated rates and determine processing order
   const nodeMap = collectUniqueNodes(rootNodes);
   const sortedKeys = topologicalSort(nodeMap);
 
-  // Step 2: Initialize capacity pool manager
+  // Create a map of target items for quick lookup
+  const targetMap = new Map<ItemId, number>();
+  if (originalTargets) {
+    originalTargets.forEach((target) => {
+      targetMap.set(target.itemId, target.rate);
+    });
+  }
+
+  // Step 2: Initialize capacity pool manager with aggregated production rates
   const poolManager = new CapacityPoolManager();
 
   sortedKeys.forEach((key) => {
-    const node = nodeMap.get(key)!;
-    poolManager.createPool(node, key);
+    const aggregatedData = nodeMap.get(key)!;
+
+    // Create a ProductionNode with aggregated totals for capacity calculation
+    const aggregatedNode: ProductionNode = {
+      ...aggregatedData.node,
+      targetRate: aggregatedData.totalRate,
+      facilityCount: aggregatedData.totalFacilityCount,
+    };
+
+    poolManager.createPool(aggregatedNode, key);
   });
 
   // Step 3: Generate Flow nodes from facility instances
-  const flowNodes: Node<FlowNodeDataSeparated>[] = [];
+  const flowNodes: Node<
+    FlowNodeDataSeparated | FlowNodeDataSeparatedWithTarget
+  >[] = [];
+  const targetSinkNodes: FlowTargetNode[] = [];
 
-  nodeMap.forEach((node, key) => {
+  nodeMap.forEach((aggregatedData, key) => {
+    const node = aggregatedData.node;
+
+    // Check if this node is also a direct target
+    const isDirectTarget = targetMap.has(node.item.id);
+    const directTargetRate = isDirectTarget
+      ? targetMap.get(node.item.id)
+      : undefined;
+
     if (node.isRawMaterial) {
       // Raw materials are shown as single nodes (no facility splitting)
+      // Use aggregated rate for display
       const isCircular = node.recipe !== null;
+      const aggregatedNode: ProductionNode = {
+        ...node,
+        targetRate: aggregatedData.totalRate,
+        facilityCount: aggregatedData.totalFacilityCount,
+      };
+
       flowNodes.push({
         id: `node-${key}`,
         type: "productionNode",
         data: {
-          productionNode: node,
+          productionNode: aggregatedNode,
           isCircular,
           items,
           facilities,
+          isDirectTarget,
+          directTargetRate,
         },
         position: { x: 0, y: 0 },
         sourcePosition: Position.Right,
@@ -189,6 +260,8 @@ export function mapPlanToFlowSeparated(
             facilityIndex: facility.facilityIndex,
             totalFacilities,
             isPartialLoad,
+            isDirectTarget,
+            directTargetRate,
           },
           position: { x: 0, y: 0 },
           sourcePosition: Position.Right,
@@ -197,6 +270,7 @@ export function mapPlanToFlowSeparated(
       });
     }
   });
+
   // Step 4: Generate edges by allocating capacity
   const edges: Edge[] = [];
   let edgeIdCounter = 0;
@@ -206,16 +280,15 @@ export function mapPlanToFlowSeparated(
   const reverseOrder = [...sortedKeys].reverse();
 
   reverseOrder.forEach((consumerKey) => {
-    const consumerNode = nodeMap.get(consumerKey)!;
+    const consumerData = nodeMap.get(consumerKey)!;
+    const consumerNode = consumerData.node;
 
     // Skip raw materials (they don't consume anything)
     if (consumerNode.isRawMaterial) {
       return;
     }
 
-    const consumerFacilities = consumerNode.isRawMaterial
-      ? []
-      : poolManager.getFacilityInstances(consumerKey);
+    const consumerFacilities = poolManager.getFacilityInstances(consumerKey);
 
     // For each consumer facility, allocate inputs from producer facilities
     consumerFacilities.forEach((consumerFacility) => {
@@ -283,11 +356,69 @@ export function mapPlanToFlowSeparated(
     });
   });
 
+  // Step 5: Create target sink nodes for each original target
+  if (originalTargets) {
+    originalTargets.forEach((target) => {
+      const item = items.find((i) => i.id === target.itemId);
+      if (!item) return;
+
+      const targetNodeId = `target-sink-${target.itemId}`;
+
+      // Find the production key for this item
+      const productionKey = Array.from(nodeMap.keys()).find((key) => {
+        const nodeData = nodeMap.get(key)!;
+        return (
+          nodeData.node.item.id === target.itemId &&
+          !nodeData.node.isRawMaterial
+        );
+      });
+
+      if (productionKey) {
+        // In separated mode, we need to allocate from the capacity pool
+        const allocations = poolManager.allocate(productionKey, target.rate);
+
+        // Create target sink node
+        targetSinkNodes.push({
+          id: targetNodeId,
+          type: "targetSink",
+          data: {
+            item,
+            targetRate: target.rate,
+            items,
+          },
+          position: { x: 0, y: 0 },
+          targetPosition: Position.Left,
+        });
+
+        // Create edges from allocated facilities to target sink
+        allocations.forEach((allocation) => {
+          edges.push({
+            id: `e${edgeIdCounter++}`,
+            source: allocation.sourceNodeId,
+            target: targetNodeId,
+            type: "default",
+            label: `${allocation.allocatedAmount.toFixed(2)} /min`,
+            data: { flowRate: allocation.allocatedAmount },
+            animated: true, // Animate target edges for emphasis
+            style: { stroke: "#10b981", strokeWidth: 2 }, // Green, thicker
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              color: "#10b981",
+            },
+          });
+        });
+      }
+    });
+  }
+
   // Apply dynamic styling to edges
   const styledEdges = applyEdgeStyling(edges);
 
   return {
-    nodes: flowNodes as FlowProductionNode[],
+    nodes: [...flowNodes, ...targetSinkNodes] as (
+      | FlowProductionNode
+      | FlowTargetNode
+    )[],
     edges: styledEdges,
   };
 }

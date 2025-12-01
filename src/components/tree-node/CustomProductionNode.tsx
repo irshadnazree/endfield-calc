@@ -5,11 +5,16 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ItemIcon } from "./ProductionTable";
-import { RecipeIOFull } from "./ProductionTable";
+import { ItemIcon } from "../ProductionTable";
+import { RecipeIOFull } from "../ProductionTable";
 import { getItemName, getFacilityName } from "@/lib/i18n-helpers";
 import { useTranslation } from "react-i18next";
-import type { FlowNodeData, FlowNodeDataSeparated } from "./flow-mapping/types";
+import type {
+  FlowNodeData,
+  FlowNodeDataSeparated,
+  FlowNodeDataSeparatedWithTarget,
+  FlowNodeDataWithTarget,
+} from "../flow-mapping/types";
 
 /**
  * Type alias for a React Flow node containing production data.
@@ -38,6 +43,12 @@ function isSeparatedMode(
   data: FlowNodeData | FlowNodeDataSeparated,
 ): data is FlowNodeDataSeparated {
   return "facilityIndex" in data && data.facilityIndex !== undefined;
+}
+
+function hasTargetInfo(
+  data: FlowNodeData | FlowNodeDataSeparated,
+): data is FlowNodeDataWithTarget | FlowNodeDataSeparatedWithTarget {
+  return "isDirectTarget" in data && data.isDirectTarget === true;
 }
 
 /**
@@ -75,6 +86,8 @@ export default function CustomProductionNode({
 
   // Check if this is separated mode data
   const isSeparated = isSeparatedMode(data);
+  const isTarget = hasTargetInfo(data);
+  const targetRate = isTarget ? data.directTargetRate : undefined;
 
   // Adjust border colors based on node type for better visual distinction
   let borderColor = "border-gray-300 dark:border-gray-600";
@@ -165,7 +178,7 @@ export default function CustomProductionNode({
           />
           <CardContent className="p-3 text-xs">
             {/* Item icon and name */}
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-2 relative">
               <ItemIcon item={node.item} />
               <span className="font-bold truncate flex-1">
                 {itemName}
@@ -176,6 +189,21 @@ export default function CustomProductionNode({
                   </span>
                 )}
               </span>
+              {/* Target badge for nodes that are also direct targets */}
+              {isTarget && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="absolute -top-1 -right-1 bg-amber-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow-md">
+                      ⭐
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    <p className="text-xs">
+                      {t("tree.alsoTarget")}: {formatNumber(targetRate!)} /min
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
             </div>
             {/* Production/Requirement rate */}
             <div className="flex items-center justify-between mb-2 bg-muted/50 rounded px-2 py-1">
