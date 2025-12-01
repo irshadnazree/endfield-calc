@@ -1,8 +1,13 @@
 import { Position, MarkerType } from "@xyflow/react";
 import type { Node, Edge } from "@xyflow/react";
-import type { Item, Facility } from "@/types";
+import type { Item, Facility, ItemId } from "@/types";
 import type { ProductionNode } from "@/lib/calculator";
-import type { FlowProductionNode, FlowNodeDataSeparated } from "./types";
+import type {
+  FlowProductionNode,
+  FlowNodeDataSeparated,
+  FlowNodeDataSeparatedWithTarget,
+  FlowTargetNode,
+} from "./types";
 import { CapacityPoolManager } from "./capacity-pool";
 import { applyEdgeStyling } from "./edge-styling";
 
@@ -144,20 +149,31 @@ function topologicalSort(
  * 2. Creates capacity pools for each unique production step
  * 3. Generates individual facility nodes
  * 4. Allocates capacity and creates edges using demand-driven allocation
+ * 5. Creates target sink nodes for user-defined goals
  *
  * @param rootNodes The root ProductionNodes of the dependency tree
  * @param items All available items in the game
  * @param facilities All available facilities in the game
+ * @param originalTargets Original user-defined production targets (optional)
  * @returns An object containing the generated React Flow nodes and edges
  */
 export function mapPlanToFlowSeparated(
   rootNodes: ProductionNode[],
   items: Item[],
   facilities: Facility[],
-): { nodes: FlowProductionNode[]; edges: Edge[] } {
+  originalTargets?: Array<{ itemId: ItemId; rate: number }>,
+): { nodes: (FlowProductionNode | FlowTargetNode)[]; edges: Edge[] } {
   // Step 1: Collect unique nodes with aggregated rates and determine processing order
   const nodeMap = collectUniqueNodes(rootNodes);
   const sortedKeys = topologicalSort(nodeMap);
+
+  // Create a map of target items for quick lookup
+  const targetMap = new Map<ItemId, number>();
+  if (originalTargets) {
+    originalTargets.forEach((target) => {
+      targetMap.set(target.itemId, target.rate);
+    });
+  }
 
   // Step 2: Initialize capacity pool manager with aggregated production rates
   const poolManager = new CapacityPoolManager();
@@ -165,6 +181,7 @@ export function mapPlanToFlowSeparated(
   sortedKeys.forEach((key) => {
     const aggregatedData = nodeMap.get(key)!;
 
+    // Create a ProductionNode with aggregated totals for capacity calculation
     const aggregatedNode: ProductionNode = {
       ...aggregatedData.node,
       targetRate: aggregatedData.totalRate,
@@ -175,10 +192,19 @@ export function mapPlanToFlowSeparated(
   });
 
   // Step 3: Generate Flow nodes from facility instances
-  const flowNodes: Node<FlowNodeDataSeparated>[] = [];
+  const flowNodes: Node<
+    FlowNodeDataSeparated | FlowNodeDataSeparatedWithTarget
+  >[] = [];
+  const targetSinkNodes: FlowTargetNode[] = [];
 
   nodeMap.forEach((aggregatedData, key) => {
     const node = aggregatedData.node;
+
+    // Check if this node is also a direct target
+    const isDirectTarget = targetMap.has(node.item.id);
+    const directTargetRate = isDirectTarget
+      ? targetMap.get(node.item.id)
+      : undefined;
 
     if (node.isRawMaterial) {
       // Raw materials are shown as single nodes (no facility splitting)
@@ -198,6 +224,8 @@ export function mapPlanToFlowSeparated(
           isCircular,
           items,
           facilities,
+          isDirectTarget,
+          directTargetRate,
         },
         position: { x: 0, y: 0 },
         sourcePosition: Position.Right,
@@ -232,6 +260,8 @@ export function mapPlanToFlowSeparated(
             facilityIndex: facility.facilityIndex,
             totalFacilities,
             isPartialLoad,
+            isDirectTarget,
+            directTargetRate,
           },
           position: { x: 0, y: 0 },
           sourcePosition: Position.Right,
@@ -240,6 +270,7 @@ export function mapPlanToFlowSeparated(
       });
     }
   });
+
   // Step 4: Generate edges by allocating capacity
   const edges: Edge[] = [];
   let edgeIdCounter = 0;
@@ -325,11 +356,69 @@ export function mapPlanToFlowSeparated(
     });
   });
 
+  // Step 5: Create target sink nodes for each original target
+  if (originalTargets) {
+    originalTargets.forEach((target) => {
+      const item = items.find((i) => i.id === target.itemId);
+      if (!item) return;
+
+      const targetNodeId = `target-sink-${target.itemId}`;
+
+      // Find the production key for this item
+      const productionKey = Array.from(nodeMap.keys()).find((key) => {
+        const nodeData = nodeMap.get(key)!;
+        return (
+          nodeData.node.item.id === target.itemId &&
+          !nodeData.node.isRawMaterial
+        );
+      });
+
+      if (productionKey) {
+        // In separated mode, we need to allocate from the capacity pool
+        const allocations = poolManager.allocate(productionKey, target.rate);
+
+        // Create target sink node
+        targetSinkNodes.push({
+          id: targetNodeId,
+          type: "targetSink",
+          data: {
+            item,
+            targetRate: target.rate,
+            items,
+          },
+          position: { x: 0, y: 0 },
+          targetPosition: Position.Left,
+        });
+
+        // Create edges from allocated facilities to target sink
+        allocations.forEach((allocation) => {
+          edges.push({
+            id: `e${edgeIdCounter++}`,
+            source: allocation.sourceNodeId,
+            target: targetNodeId,
+            type: "default",
+            label: `${allocation.allocatedAmount.toFixed(2)} /min`,
+            data: { flowRate: allocation.allocatedAmount },
+            animated: true, // Animate target edges for emphasis
+            style: { stroke: "#10b981", strokeWidth: 2 }, // Green, thicker
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              color: "#10b981",
+            },
+          });
+        });
+      }
+    });
+  }
+
   // Apply dynamic styling to edges
   const styledEdges = applyEdgeStyling(edges);
 
   return {
-    nodes: flowNodes as FlowProductionNode[],
+    nodes: [...flowNodes, ...targetSinkNodes] as (
+      | FlowProductionNode
+      | FlowTargetNode
+    )[],
     edges: styledEdges,
   };
 }

@@ -10,9 +10,10 @@ import {
   type Edge,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import type { Item, Facility } from "@/types";
+import type { Item, Facility, ItemId } from "@/types";
 import type { UnifiedProductionPlan } from "@/lib/calculator";
-import CustomProductionNode from "./CustomProductionNode";
+import CustomProductionNode from "./tree-node/CustomProductionNode";
+import CustomTargetNode from "./tree-node/CustomTargetNode";
 import type {
   FlowProductionNode,
   VisualizationMode,
@@ -51,7 +52,10 @@ export default function ProductionDependencyTree({
   items,
   facilities,
   visualizationMode = "separated",
-}: ProductionDependencyTreeProps) {
+  targets,
+}: ProductionDependencyTreeProps & {
+  targets?: Array<{ itemId: ItemId; rate: number }>;
+}) {
   const { t } = useTranslation("production");
 
   const { initialNodes, initialEdges } = useMemo(() => {
@@ -62,8 +66,18 @@ export default function ProductionDependencyTree({
     // Select the appropriate mapper based on visualization mode
     const flowData =
       visualizationMode === "separated"
-        ? mapPlanToFlowSeparated(plan.dependencyRootNodes, items, facilities)
-        : mapPlanToFlowMerged(plan.dependencyRootNodes, items, facilities);
+        ? mapPlanToFlowSeparated(
+            plan.dependencyRootNodes,
+            items,
+            facilities,
+            targets,
+          ) // Pass targets
+        : mapPlanToFlowMerged(
+            plan.dependencyRootNodes,
+            items,
+            facilities,
+            targets,
+          ); // Pass targets
 
     // Apply layout algorithm to position nodes
     const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
@@ -76,7 +90,7 @@ export default function ProductionDependencyTree({
       initialNodes: layoutedNodes as FlowProductionNode[],
       initialEdges: layoutedEdges,
     };
-  }, [plan, items, facilities, visualizationMode]);
+  }, [plan, items, facilities, visualizationMode, targets]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<FlowProductionNode>(
     [],
@@ -93,6 +107,7 @@ export default function ProductionDependencyTree({
   const nodeTypes: NodeTypes = useMemo(
     () => ({
       productionNode: CustomProductionNode,
+      targetSink: CustomTargetNode,
     }),
     [],
   );

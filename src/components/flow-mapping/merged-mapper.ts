@@ -1,8 +1,13 @@
 import { Position, MarkerType } from "@xyflow/react";
 import type { Node, Edge } from "@xyflow/react";
-import type { Item, Facility } from "@/types";
+import type { Item, Facility, ItemId } from "@/types";
 import type { ProductionNode } from "@/lib/calculator";
-import type { FlowNodeData, FlowProductionNode } from "./types";
+import type {
+  FlowNodeData,
+  FlowProductionNode,
+  FlowTargetNode,
+  TargetSinkNodeData,
+} from "./types";
 import { applyEdgeStyling } from "./edge-styling";
 
 /**
@@ -97,10 +102,20 @@ export function mapPlanToFlowMerged(
   rootNodes: ProductionNode[],
   items: Item[],
   facilities: Facility[],
-): { nodes: FlowProductionNode[]; edges: Edge[] } {
+  originalTargets?: Array<{ itemId: ItemId; rate: number }>,
+): { nodes: (FlowProductionNode | FlowTargetNode)[]; edges: Edge[] } {
   const nodes: Node<FlowNodeData>[] = [];
   const edges: Edge[] = [];
   const nodeKeyToId = new Map<string, string>();
+  const targetSinkNodes: Node<TargetSinkNodeData>[] = [];
+  // Create a map of target items for quick lookup
+  const targetMap = new Map<ItemId, number>();
+  if (originalTargets) {
+    originalTargets.forEach((target) => {
+      targetMap.set(target.itemId, target.rate);
+    });
+  }
+
   const aggregatedNodes = aggregateProductionNodes(rootNodes);
 
   /**
@@ -155,6 +170,13 @@ export function mapPlanToFlowMerged(
       const aggregatedData = aggregatedNodes.get(key)!;
       const isCircular = node.isRawMaterial && node.recipe !== null;
 
+      // Check if this node is also a direct target
+      const isDirectTarget = targetMap.has(node.item.id);
+      const directTargetRate = isDirectTarget
+        ? targetMap.get(node.item.id)
+        : undefined;
+
+      // Create a ProductionNode with aggregated totals for display
       const aggregatedNode: ProductionNode = {
         ...aggregatedData.node,
         targetRate: aggregatedData.totalRate,
@@ -169,8 +191,10 @@ export function mapPlanToFlowMerged(
           isCircular,
           items,
           facilities,
+          isDirectTarget,
+          directTargetRate,
         },
-        position: { x: 0, y: 0 }, // Layout will be applied later
+        position: { x: 0, y: 0 },
         sourcePosition: Position.Right,
         targetPosition: Position.Left,
       });
@@ -214,11 +238,65 @@ export function mapPlanToFlowMerged(
   const edgeIdCounter = { count: 0 };
   rootNodes.forEach((root) => traverse(root, null, edgeIdCounter));
 
+  if (originalTargets) {
+    originalTargets.forEach((target) => {
+      const item = items.find((i) => i.id === target.itemId);
+      if (!item) return;
+
+      const targetNodeId = `target-sink-${target.itemId}`;
+
+      // Find the production node for this item
+      const productionKey = Array.from(aggregatedNodes.keys()).find((key) => {
+        const nodeData = aggregatedNodes.get(key)!;
+        return (
+          nodeData.node.item.id === target.itemId &&
+          !nodeData.node.isRawMaterial
+        );
+      });
+
+      if (productionKey) {
+        const productionNodeId = makeNodeIdFromKey(productionKey);
+
+        // Create target sink node
+        targetSinkNodes.push({
+          id: targetNodeId,
+          type: "targetSink",
+          data: {
+            item,
+            targetRate: target.rate,
+            items,
+          },
+          position: { x: 0, y: 0 },
+          targetPosition: Position.Left,
+        });
+
+        // Create edge from production node to target sink
+        edges.push({
+          id: `e${edgeIdCounter.count++}`,
+          source: productionNodeId,
+          target: targetNodeId,
+          type: "default",
+          label: `${target.rate.toFixed(2)} /min`,
+          data: { flowRate: target.rate },
+          animated: true, // Animate target edges for emphasis
+          style: { stroke: "#10b981", strokeWidth: 2 }, // Green, thicker
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            color: "#10b981",
+          },
+        });
+      }
+    });
+  }
+
   // Apply dynamic styling to edges based on flow rates
   const styledEdges = applyEdgeStyling(edges);
 
   return {
-    nodes: nodes as FlowProductionNode[],
+    nodes: [...nodes, ...targetSinkNodes] as (
+      | FlowProductionNode
+      | FlowTargetNode
+    )[],
     edges: styledEdges,
   };
 }

@@ -35,11 +35,6 @@ export interface FlowNodeDataSeparated extends FlowNodeData {
 }
 
 /**
- * Type alias for a React Flow node containing production data.
- */
-export type FlowProductionNode = Node<FlowNodeData | FlowNodeDataSeparated>;
-
-/**
  * Represents a single physical facility instance in separated mode.
  * Each instance has its own capacity and can be connected independently.
  */
@@ -83,3 +78,61 @@ export interface AllocationResult {
   /** Index of the facility providing this allocation */
   fromFacilityIndex: number;
 }
+/**
+ * Extended FlowNodeData that includes target information.
+ * Used when a production node is also a direct user-defined target.
+ */
+export interface FlowNodeDataWithTarget extends FlowNodeData {
+  /** Whether this node is a direct user-defined target */
+  isDirectTarget?: boolean;
+  /** The rate requested as a direct target (if applicable) */
+  directTargetRate?: number;
+}
+
+/**
+ * Extended FlowNodeDataSeparated that includes target information.
+ * Used in separated mode when a production node is also a direct user-defined target.
+ */
+export interface FlowNodeDataSeparatedWithTarget extends FlowNodeDataSeparated {
+  /** Whether this node is a direct user-defined target */
+  isDirectTarget?: boolean;
+  /** The rate requested as a direct target (if applicable) */
+  directTargetRate?: number;
+}
+
+/**
+ * Represents data for a virtual sink node that collects production output for user-defined targets.
+ * These nodes help visualize which items are final production goals vs intermediate products.
+ */
+export interface TargetSinkNodeData {
+  /** The item being collected as a target */
+  item: Item;
+  /** The target production rate for this item */
+  targetRate: number;
+  /** All available items (for icon rendering) */
+  items: Item[];
+  [key: string]: unknown;
+}
+
+/**
+ * Type alias for a target sink node in the React Flow graph.
+ */
+export type FlowTargetNode = Node<TargetSinkNodeData>;
+
+/**
+ * Union type for all possible production flow node data types.
+ */
+export type AllFlowNodeData =
+  | FlowNodeData
+  | FlowNodeDataSeparated
+  | FlowNodeDataWithTarget
+  | FlowNodeDataSeparatedWithTarget;
+
+/**
+ * Updated FlowProductionNode that can include target information.
+ */
+export type FlowProductionNode =
+  | Node<FlowNodeData>
+  | Node<FlowNodeDataSeparated>
+  | Node<FlowNodeDataWithTarget>
+  | Node<FlowNodeDataSeparatedWithTarget>;
