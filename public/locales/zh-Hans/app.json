@@ -11,5 +11,9 @@
     "title": "开发中",
     "description": "数据未经验证，仅供参考",
     "close": "关闭警告"
+  },
+  "footer": {
+    "feedback": "反馈与建议：",
+    "unofficial": "非官方粉丝工具"
   }
 }

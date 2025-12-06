@@ -7,6 +7,7 @@ import AppHeader from "./components/AppHeader";
 import LeftPanel from "./components/LeftPanel";
 import ProductionViewTabs from "./components/ProductionViewTabs";
 import AddTargetDialogGrid from "./components/AddTargetDialogGrid";
+import AppFooter from "./components/AppFooter";
 
 export default function App() {
   const { i18n } = useTranslation("app");
@@ -67,6 +68,8 @@ export default function App() {
           existingTargetIds={targets.map((t) => t.itemId)}
           onAddTarget={handleAddTarget}
         />
+
+        <AppFooter />
       </div>
     </TooltipProvider>
   );

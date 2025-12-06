@@ -11,5 +11,9 @@
     "title": "In Development",
     "description": "Data not verified, for reference only",
     "close": "Close warning"
+  },
+  "footer": {
+    "feedback": "Feedback & Suggestions:",
+    "unofficial": "Unofficial fan-made tool"
   }
 }
