@@ -18,6 +18,13 @@ Endfield Tool 是一个面向《明日方舟：终末地》的生产规划和设
 
 欢迎贡献！如果发现 bug 或有改进建议，请随时提交 issue 或 pull request。
 
+## 社群
+
+欢迎加入我们的社群讨论游戏攻略、反馈问题或分享使用心得：
+
+[![QQ Group](https://img.shields.io/badge/QQ-1075221296-blue?logo=tencentqq)](https://qm.qq.com/q/2vdhjwYXVC)
+[![Discord](https://img.shields.io/badge/Discord-JOIN_US-5865F2?logo=discord&logoColor=white)](https://discord.gg/6V7CupPwb6)
+
 ## 许可证
 
 MIT

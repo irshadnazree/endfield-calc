@@ -18,6 +18,13 @@ It helps players plan and optimize resource production: building facilities, cra
 
 Contributions are welcome! If you find bugs or have improvement suggestions, please feel free to open an issue or submit a pull request.
 
+## Community
+
+Join our community to discuss strategies, report issues, or share your experience:
+
+[![Discord](https://img.shields.io/badge/Discord-JOIN_US-5865F2?logo=discord&logoColor=white)](https://discord.gg/6V7CupPwb6)
+
+
 ## License
 
 MIT
