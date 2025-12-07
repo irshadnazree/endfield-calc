@@ -34,7 +34,7 @@ export default function App() {
 
   return (
     <TooltipProvider>
-      <div className="h-screen flex flex-col p-4 gap-4">
+      <div className="h-screen flex flex-col p-4 pb-0 gap-4">
         <AppHeader onLanguageChange={handleLanguageChange} />
 
         <div className="flex-1 flex gap-4 min-h-0">

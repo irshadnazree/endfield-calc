@@ -10,6 +10,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SiGithub } from "react-icons/si";
 
 interface AppHeaderProps {
   onLanguageChange: (lang: string) => void;
@@ -46,12 +47,7 @@ export default function AppHeader({ onLanguageChange }: AppHeaderProps) {
             rel="noopener noreferrer"
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            <img
-              height="16"
-              width="16"
-              src="https://cdn.simpleicons.org/github/181717"
-              alt="GitHub"
-            />
+            <SiGithub className="h-4 w-4" />
             <span>GitHub</span>
           </a>
         </div>
