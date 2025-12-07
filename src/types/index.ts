@@ -22,7 +22,6 @@ type Recipe = {
 type Facility = {
   id: FacilityId;
   powerConsumption: number;
-  supportedRecipes: RecipeId[];
   iconUrl?: string;
   tier: number;
 };
