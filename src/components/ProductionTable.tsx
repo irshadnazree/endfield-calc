@@ -299,16 +299,26 @@ const ProductionTable = memo(function ProductionTable({
               let rowClassName = "h-12";
               if (line.isTarget) {
                 rowClassName =
-                  "h-12 bg-amber-50/50 dark:bg-amber-900/10 hover:bg-amber-100/70 dark:hover:bg-amber-900/30 border-l-4 border-amber-500";
+                  "h-12 bg-amber-50/50 dark:bg-amber-900/10 hover:bg-amber-100/70 dark:hover:bg-amber-900/30";
               } else if (isManualRaw) {
                 rowClassName =
-                  "h-12 bg-blue-50/50 dark:bg-blue-900/10 hover:bg-blue-100/70 dark:hover:bg-blue-900/30 border-l-4 border-blue-500";
+                  "h-12 bg-blue-50/50 dark:bg-blue-900/10 hover:bg-blue-100/70 dark:hover:bg-blue-900/30";
               }
 
               return (
                 <TableRow key={line.item.id} className={rowClassName}>
                   {/* Raw material toggle */}
-                  <TableCell className="p-2">
+                  <TableCell
+                    className={[
+                      "p-2 relative",
+                      line.isTarget &&
+                        "before:absolute before:left-0 before:top-0 before:h-full before:w-1 before:bg-amber-500",
+                      isManualRaw &&
+                        "before:absolute before:left-0 before:top-0 before:h-full before:w-1 before:bg-blue-500",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                  >
                     <div className="flex justify-center">
                       {/* Only show switch for items that can be manually toggled */}
                       {!line.isTarget &&
