@@ -22,6 +22,7 @@ export default function App() {
     handleTargetChange,
     handleTargetRemove,
     handleAddTarget,
+    handleToggleRawMaterial,
     handleRecipeChange,
     handleAddClick,
     setDialogOpen,
@@ -58,6 +59,7 @@ export default function App() {
             activeTab={activeTab}
             onTabChange={setActiveTab}
             onRecipeChange={handleRecipeChange}
+            onToggleRawMaterial={handleToggleRawMaterial}
           />
         </div>
 

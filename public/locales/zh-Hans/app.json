@@ -1,5 +1,9 @@
 {
   "calculationError": "计算生产计划时发生错误。请检查您的目标产出和配方覆盖设置。",
+  "footer": {
+    "feedback": "反馈与建议：",
+    "unofficial": "非官方粉丝工具"
+  },
   "tabs": {
     "merged": "合并",
     "separated": "分离",
@@ -8,12 +12,8 @@
   },
   "title": "终末地工厂生产计算器",
   "warning": {
-    "title": "开发中",
+    "close": "关闭警告",
     "description": "数据未经验证，仅供参考",
-    "close": "关闭警告"
-  },
-  "footer": {
-    "feedback": "反馈与建议：",
-    "unofficial": "非官方粉丝工具"
+    "title": "开发中"
   }
 }

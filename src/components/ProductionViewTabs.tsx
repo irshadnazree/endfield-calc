@@ -19,6 +19,7 @@ interface ProductionViewTabsProps {
   activeTab: "table" | "tree";
   onTabChange: (tab: "table" | "tree") => void;
   onRecipeChange: (itemId: ItemId, recipeId: RecipeId) => void;
+  onToggleRawMaterial: (itemId: ItemId) => void;
 }
 
 export default function ProductionViewTabs({
@@ -29,6 +30,7 @@ export default function ProductionViewTabs({
   activeTab,
   onTabChange,
   onRecipeChange,
+  onToggleRawMaterial,
 }: ProductionViewTabsProps) {
   const { t } = useTranslation("app");
   const [visualizationMode, setVisualizationMode] =
@@ -83,6 +85,7 @@ export default function ProductionViewTabs({
                   items={items}
                   facilities={facilities}
                   onRecipeChange={onRecipeChange}
+                  onToggleRawMaterial={onToggleRawMaterial}
                 />
               </div>
             </TabsContent>

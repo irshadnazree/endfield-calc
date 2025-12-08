@@ -1,5 +1,9 @@
 {
   "calculationError": "計算生產計畫時發生錯誤。請檢查您的目標產出和配方覆蓋設定。",
+  "footer": {
+    "feedback": "反饋與建議：",
+    "unofficial": "非官方粉絲工具"
+  },
   "tabs": {
     "merged": "合並",
     "separated": "分離",
@@ -8,12 +12,8 @@
   },
   "title": "終末地工廠生產計算器",
   "warning": {
-    "title": "開發中",
+    "close": "關閉警告",
     "description": "數據未經驗證，僅供參考",
-    "close": "關閉警告"
-  },
-  "footer": {
-    "feedback": "反饋與建議：",
-    "unofficial": "非官方粉絲工具"
+    "title": "開發中"
   }
 }

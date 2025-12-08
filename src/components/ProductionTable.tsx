@@ -19,6 +19,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Switch } from "@/components/ui/switch";
 import type { Item, Recipe, Facility, ItemId, RecipeId } from "@/types";
 import { useTranslation } from "react-i18next";
 import { getFacilityName, getItemName } from "@/lib/i18n-helpers";
@@ -32,6 +33,7 @@ export type ProductionLineData = {
   facilityCount: number;
   isRawMaterial?: boolean;
   isTarget?: boolean;
+  isManualRawMaterial?: boolean;
 };
 
 type ProductionTableProps = {
@@ -39,6 +41,7 @@ type ProductionTableProps = {
   items: Item[];
   facilities: Facility[];
   onRecipeChange: (itemId: ItemId, recipeId: RecipeId) => void;
+  onToggleRawMaterial: (itemId: ItemId) => void;
 };
 
 const formatNumber = (num: number, decimals = 2): string => {
@@ -229,6 +232,7 @@ const ProductionTable = memo(function ProductionTable({
   data,
   items,
   onRecipeChange,
+  onToggleRawMaterial,
 }: ProductionTableProps) {
   const { t } = useTranslation("production");
 
@@ -244,6 +248,9 @@ const ProductionTable = memo(function ProductionTable({
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
+            <TableHead className="w-16 h-9 text-center">
+              {t("table.headers.rawMaterial")}
+            </TableHead>
             <TableHead className="w-12 h-9">
               {t("table.headers.icon")}
             </TableHead>
@@ -271,7 +278,7 @@ const ProductionTable = memo(function ProductionTable({
           {data.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={7}
+                colSpan={8}
                 className="text-center text-muted-foreground h-32"
               >
                 {t("table.noData")}
@@ -286,16 +293,61 @@ const ProductionTable = memo(function ProductionTable({
                 ? line.facility.powerConsumption * line.facilityCount
                 : 0;
 
+              const isToggleDisabled = line.isTarget || line.isRawMaterial;
+              const isManualRaw = line.isManualRawMaterial;
+
+              // Determine row styling
+              let rowClassName = "h-12";
+              if (line.isTarget) {
+                rowClassName =
+                  "h-12 bg-amber-50/50 dark:bg-amber-900/10 hover:bg-amber-100/70 dark:hover:bg-amber-900/30 border-l-4 border-amber-500";
+              } else if (isManualRaw) {
+                rowClassName =
+                  "h-12 bg-blue-50/50 dark:bg-blue-900/10 hover:bg-blue-100/70 dark:hover:bg-blue-900/30 border-l-4 border-blue-500";
+              }
+
               return (
-                <TableRow
-                  key={line.item.id}
-                  className={
-                    line.isTarget
-                      ? "h-12 bg-amber-50/50 dark:bg-amber-900/10 hover:bg-amber-100/70 dark:hover:bg-amber-900/30 border-l-4 border-amber-500"
-                      : "h-12"
-                  }
-                >
-                  {/* 图标 */}
+                <TableRow key={line.item.id} className={rowClassName}>
+                  {/* Raw material toggle */}
+                  <TableCell className="p-2">
+                    <div className="flex justify-center">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div>
+                            <Switch
+                              checked={isManualRaw}
+                              disabled={isToggleDisabled}
+                              onCheckedChange={() =>
+                                onToggleRawMaterial(line.item.id)
+                              }
+                              className="data-[state=checked]:bg-blue-500"
+                            />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {line.isTarget ? (
+                            <p className="text-xs">
+                              {t("table.cannotMarkTarget")}
+                            </p>
+                          ) : line.isRawMaterial ? (
+                            <p className="text-xs">
+                              {t("table.alreadyRawMaterial")}
+                            </p>
+                          ) : isManualRaw ? (
+                            <p className="text-xs">
+                              {t("table.unmarkRawMaterial")}
+                            </p>
+                          ) : (
+                            <p className="text-xs">
+                              {t("table.markAsRawMaterial")}
+                            </p>
+                          )}
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  </TableCell>
+
+                  {/* Icon */}
                   <TableCell className="p-2">
                     {line.item.iconUrl ? (
                       <img
@@ -310,7 +362,7 @@ const ProductionTable = memo(function ProductionTable({
                     )}
                   </TableCell>
 
-                  {/* 物品名称 */}
+                  {/* Item name */}
                   <TableCell className="p-2">
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -324,11 +376,15 @@ const ProductionTable = memo(function ProductionTable({
                     </Tooltip>
                   </TableCell>
 
-                  {/* 配方 */}
+                  {/* Recipe - hide when manually marked as raw material */}
                   <TableCell className="p-2">
                     {line.isRawMaterial ? (
                       <div className="text-xs text-muted-foreground">
                         {t("table.rawMaterial")}
+                      </div>
+                    ) : isManualRaw ? (
+                      <div className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                        {t("table.manualRawMaterial")}
                       </div>
                     ) : line.availableRecipes.length > 1 ? (
                       <Select
@@ -396,24 +452,24 @@ const ProductionTable = memo(function ProductionTable({
                     )}
                   </TableCell>
 
-                  {/* 设施图标 */}
+                  {/* Facility icon */}
                   <TableCell className="p-2">
                     <FacilityIcon
                       facility={line.facility}
-                      isRawMaterial={line.isRawMaterial}
+                      isRawMaterial={line.isRawMaterial || isManualRaw}
                     />
                   </TableCell>
 
-                  {/* 机器数量 */}
+                  {/* Facility count */}
                   <TableCell className="text-right font-mono text-sm p-2">
-                    {line.isRawMaterial ? (
+                    {line.isRawMaterial || isManualRaw ? (
                       <span className="text-muted-foreground">-</span>
                     ) : (
                       formatNumber(line.facilityCount, 1)
                     )}
                   </TableCell>
 
-                  {/* 产能 */}
+                  {/* Output rate */}
                   <TableCell className="text-right font-mono text-sm p-2">
                     <div className="flex flex-col items-end">
                       <span>{formatNumber(line.outputRate)}</span>
@@ -423,9 +479,9 @@ const ProductionTable = memo(function ProductionTable({
                     </div>
                   </TableCell>
 
-                  {/* 总功耗 */}
+                  {/* Total power */}
                   <TableCell className="text-right font-mono text-sm p-2">
-                    {line.isRawMaterial ? (
+                    {line.isRawMaterial || isManualRaw ? (
                       <span className="text-muted-foreground">-</span>
                     ) : (
                       <div className="flex flex-col items-end">

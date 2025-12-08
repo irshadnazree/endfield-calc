@@ -5,6 +5,8 @@
     "time": "耗时"
   },
   "table": {
+    "alreadyRawMaterial": "已经是原材料",
+    "cannotMarkTarget": "目标物品不能标记为原材料",
     "headers": {
       "count": "数量",
       "facility": "设施",
@@ -12,11 +14,15 @@
       "item": "物品",
       "outputRate": "产能/分",
       "power": "功耗 (kW)",
+      "rawMaterial": "原材料",
       "recipe": "配方"
     },
+    "manualRawMaterial": "原材料（手动标记）",
+    "markAsRawMaterial": "标记为原材料",
     "noData": "暂无数据",
     "noRecipe": "无配方",
-    "rawMaterial": "原材料"
+    "rawMaterial": "原材料",
+    "unmarkRawMaterial": "取消标记"
   },
   "tree": {
     "alsoTarget": "同时也是目标",

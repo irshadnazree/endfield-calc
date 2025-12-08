@@ -20,6 +20,7 @@ export type ProductionNode = {
   isRawMaterial: boolean;
   isTarget: boolean;
   dependencies: ProductionNode[];
+  manualRawMaterials?: Set<ItemId>;
 };
 
 /**
@@ -35,6 +36,7 @@ export type UnifiedProductionPlan = {
   totalPowerConsumption: number;
   /** Map of ItemId to the required rate of raw materials (items with no recipes). */
   rawMaterialRequirements: Map<ItemId, number>;
+  manualRawMaterials?: Set<ItemId>;
 };
 
 export type RecipeSelector = (
@@ -342,6 +344,7 @@ function calculateNode(
   recipeSelector: RecipeSelector = defaultRecipeSelector,
   visitedPath: Set<ItemId> = new Set(),
   isDirectTarget: boolean = false,
+  manualRawMaterials?: Set<ItemId>,
 ): ProductionNode {
   const item = maps.itemMap.get(itemId);
   if (!item) throw new Error(`Item not found: ${itemId}`);
@@ -356,6 +359,20 @@ function calculateNode(
       facilityCount: 0,
       isRawMaterial: true,
       isTarget: false,
+      dependencies: [],
+    };
+  }
+
+  // Check if manually marked as raw material
+  if (manualRawMaterials?.has(itemId)) {
+    return {
+      item,
+      targetRate: requiredRate,
+      recipe: null,
+      facility: null,
+      facilityCount: 0,
+      isRawMaterial: true,
+      isTarget: isDirectTarget,
       dependencies: [],
     };
   }
@@ -417,6 +434,7 @@ function calculateNode(
       recipeSelector,
       newVisitedPath,
       false,
+      manualRawMaterials,
     );
   });
 
@@ -440,6 +458,7 @@ function buildDependencyTree(
   maps: ProductionMaps,
   recipeOverrides?: Map<ItemId, RecipeId>,
   recipeSelector: RecipeSelector = defaultRecipeSelector,
+  manualRawMaterials?: Set<ItemId>,
 ): ProductionNode[] {
   return targets.map((t) =>
     calculateNode(
@@ -450,6 +469,7 @@ function buildDependencyTree(
       recipeSelector,
       new Set(),
       true,
+      manualRawMaterials,
     ),
   );
 }
@@ -485,6 +505,7 @@ export function calculateProductionPlan(
   facilities: Facility[],
   recipeOverrides?: Map<ItemId, RecipeId>,
   recipeSelector: RecipeSelector = defaultRecipeSelector,
+  manualRawMaterials?: Set<ItemId>,
 ): UnifiedProductionPlan {
   if (targets.length === 0) throw new Error("No targets specified");
 
@@ -501,6 +522,7 @@ export function calculateProductionPlan(
     maps,
     recipeOverrides,
     recipeSelector,
+    manualRawMaterials,
   );
 
   // 2. Process the merged and flattened plan for statistics and tables.

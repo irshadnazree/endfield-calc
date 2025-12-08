@@ -1,5 +1,9 @@
 {
   "calculationError": "An error occurred during production plan calculation. Please check your targets and recipe overrides.",
+  "footer": {
+    "feedback": "Feedback & Suggestions:",
+    "unofficial": "Unofficial fan-made tool"
+  },
   "tabs": {
     "merged": "Merged",
     "separated": "Separated",
@@ -8,12 +12,8 @@
   },
   "title": "Endfield Factory Production Calculator",
   "warning": {
-    "title": "In Development",
+    "close": "Close warning",
     "description": "Data not verified, for reference only",
-    "close": "Close warning"
-  },
-  "footer": {
-    "feedback": "Feedback & Suggestions:",
-    "unofficial": "Unofficial fan-made tool"
+    "title": "In Development"
   }
 }

@@ -18,6 +18,9 @@ export function useProductionPlan() {
   );
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"table" | "tree">("table");
+  const [manualRawMaterials, setManualRawMaterials] = useState<Set<ItemId>>(
+    new Set(),
+  );
 
   const { plan, tableData, error } = useMemo(() => {
     let plan: UnifiedProductionPlan | null = null;
@@ -32,6 +35,8 @@ export function useProductionPlan() {
           recipes,
           facilities,
           recipeOverrides,
+          undefined,
+          manualRawMaterials,
         );
 
         tableData = plan.flatList.map((node) => {
@@ -48,6 +53,7 @@ export function useProductionPlan() {
             facilityCount: node.facilityCount ?? 0,
             isRawMaterial: node.isRawMaterial,
             isTarget: node.isTarget,
+            isManualRawMaterial: manualRawMaterials.has(node.item.id),
           };
         });
       }
@@ -56,7 +62,7 @@ export function useProductionPlan() {
     }
 
     return { plan, tableData, error };
-  }, [targets, recipeOverrides, t]);
+  }, [targets, recipeOverrides, manualRawMaterials, t]);
 
   const handleTargetChange = useCallback((index: number, rate: number) => {
     setTargets((prev) => {
@@ -89,6 +95,18 @@ export function useProductionPlan() {
     setDialogOpen(true);
   }, []);
 
+  const handleToggleRawMaterial = useCallback((itemId: ItemId) => {
+    setManualRawMaterials((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(itemId)) {
+        newSet.delete(itemId);
+      } else {
+        newSet.add(itemId);
+      }
+      return newSet;
+    });
+  }, []);
+
   return {
     targets,
     setTargets,
@@ -104,6 +122,7 @@ export function useProductionPlan() {
     handleTargetChange,
     handleTargetRemove,
     handleAddTarget,
+    handleToggleRawMaterial,
     handleRecipeChange,
     handleAddClick,
   };

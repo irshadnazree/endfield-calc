@@ -5,6 +5,8 @@
     "time": "耗時"
   },
   "table": {
+    "alreadyRawMaterial": "已經是原材料",
+    "cannotMarkTarget": "目標物品不能標記為原材料",
     "headers": {
       "count": "數量",
       "facility": "設施",
@@ -12,11 +14,15 @@
       "item": "物品",
       "outputRate": "產能/分",
       "power": "功耗 (kW)",
+      "rawMaterial": "原材料",
       "recipe": "配方"
     },
+    "manualRawMaterial": "原材料（手動標記）",
+    "markAsRawMaterial": "標記為原材料",
     "noData": "暫無數據",
     "noRecipe": "無配方",
-    "rawMaterial": "原材料"
+    "rawMaterial": "原材料",
+    "unmarkRawMaterial": "取消標記"
   },
   "tree": {
     "alsoTarget": "同時也是目標",
@@ -26,7 +32,7 @@
     "facilityCount": "設施數量",
     "facilityIndex": "設施序號",
     "item": "物品",
-    "noTarget": "尚未設定目標產出。請設定目標以檢視依賴樹。",
+    "noTarget": "尚未設置目標產出。請設置目標以查看依賴樹。",
     "partialLoad": "部分負載",
     "power": "電力",
     "produced": "產出",

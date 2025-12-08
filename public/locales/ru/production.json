@@ -1,1 +1,46 @@
-{ "recipe": { "inputs": "Входы", "outputs": "Выходы", "time": "Время" }, "table": { "headers": { "count": "Количество", "facility": "Производство", "icon": "Иконка", "item": "Предмет", "outputRate": "Скорость/мин", "power": "Энергия (кВт)", "recipe": "Рецепт" }, "noData": "Нет данных", "noRecipe": "Нет рецепта", "rawMaterial": "Сырьё" }, "tree": { "alsoTarget": "Также является целью", "circularRawMaterial": "Сырьё с циклической зависимостью", "circularWarning": "Предупреждение о циклическом производстве", "facility": "Производство", "facilityCount": "Количество производств", "facilityIndex": "Индекс производства", "item": "Предмет", "noTarget": "Цель выхода ещё не задана. Установите цель, чтобы увидеть дерево зависимостей.", "partialLoad": "Частичная загрузка", "power": "Энергия", "produced": "Произведено", "productionTarget": "Цель производства", "required": "Требуется", "target": "Цель", "targetDescription": "Цель производства {{item}} со скоростью {{rate}} в минуту.", "targetRate": "Целевая скорость", "trueRawMaterial": "Истинное сырьё" } }
+{
+  "recipe": {
+    "inputs": "Входы",
+    "outputs": "Выходы",
+    "time": "Время"
+  },
+  "table": {
+    "alreadyRawMaterial": "Уже является сырьем",
+    "cannotMarkTarget": "Целевые предметы не могут быть помечены как сырье",
+    "headers": {
+      "count": "Количество",
+      "facility": "Объект",
+      "icon": "Значок",
+      "item": "Предмет",
+      "outputRate": "Производство/мин",
+      "power": "Энергия (кВт)",
+      "rawMaterial": "Сырье",
+      "recipe": "Рецепт"
+    },
+    "manualRawMaterial": "Сырье (Отмечено вручную)",
+    "markAsRawMaterial": "Пометить как сырье",
+    "noData": "Нет данных",
+    "noRecipe": "Нет рецепта",
+    "rawMaterial": "Сырье",
+    "unmarkRawMaterial": "Снять отметку"
+  },
+  "tree": {
+    "alsoTarget": "Также является целью",
+    "circularRawMaterial": "Материал циклической зависимости",
+    "circularWarning": "Предупреждение о производственном цикле",
+    "facility": "Объект",
+    "facilityCount": "Количество объектов",
+    "facilityIndex": "Индекс объекта",
+    "item": "Предмет",
+    "noTarget": "Цель производства не установлена. Пожалуйста, установите цель для просмотра дерева зависимостей.",
+    "partialLoad": "Частичная нагрузка",
+    "power": "Энергия",
+    "produced": "Произведено",
+    "productionTarget": "Цель производства",
+    "required": "Требуется",
+    "target": "Цель",
+    "targetDescription": "Производить {{rate}} {{item}} в минуту.",
+    "targetRate": "Целевая скорость",
+    "trueRawMaterial": "Настоящее сырье"
+  }
+}
