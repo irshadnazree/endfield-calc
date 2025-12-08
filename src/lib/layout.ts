@@ -26,6 +26,7 @@ export const getLayoutedElements = (
   // Configure Dagre graph settings
   dagreGraph.setGraph({
     rankdir: direction, // Graph direction (e.g., "LR" for left-to-right)
+    ranker: "network-simplex",
     ranksep: 80, // Minimum separation between ranks
     nodesep: 40, // Minimum separation between nodes in the same rank
     marginx: 20, // Margin around the graph
