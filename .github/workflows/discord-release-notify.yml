@@ -1,0 +1,65 @@
+# Send release notifications to Discord
+name: Discord Release Notification
+
+on:
+  # Trigger when a new release is published
+  release:
+    types: [published]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Discord Notification
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          RELEASE_NAME: ${{ github.event.release.name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_URL: ${{ github.event.release.html_url }}
+          RELEASE_BODY: ${{ github.event.release.body }}
+          RELEASE_AUTHOR: ${{ github.event.release.author.login }}
+          RELEASE_PRERELEASE: ${{ github.event.release.prerelease }}
+          REPO_NAME: ${{ github.repository }}
+        run: |
+          # Determine embed color based on release type
+          if [ "$RELEASE_PRERELEASE" = "true" ]; then
+            COLOR=16776960  # Yellow for pre-release
+          else
+            COLOR=5763719   # Green for stable release
+          fi
+
+          # Escape and format the release body for JSON
+          ESCAPED_BODY=$(echo "$RELEASE_BODY" | jq -Rs . | sed 's/^"//;s/"$//')
+
+          # Truncate body if too long (Discord embed description limit is 4096 chars)
+          if [ ${#ESCAPED_BODY} -gt 4000 ]; then
+            ESCAPED_BODY="${ESCAPED_BODY:0:3900}...\n\n[View full release notes]($RELEASE_URL)"
+          fi
+
+          # Build and send Discord embed message
+          curl -H "Content-Type: application/json" \
+               -d "{
+                 \"embeds\": [{
+                   \"title\": \"🚀 New Release: $RELEASE_TAG\",
+                   \"description\": $ESCAPED_BODY,
+                   \"url\": \"$RELEASE_URL\",
+                   \"color\": $COLOR,
+                   \"fields\": [
+                     {
+                       \"name\": \"Release Name\",
+                       \"value\": \"$RELEASE_NAME\",
+                       \"inline\": true
+                     },
+                     {
+                       \"name\": \"Author\",
+                       \"value\": \"$RELEASE_AUTHOR\",
+                       \"inline\": true
+                     }
+                   ],
+                   \"footer\": {
+                     \"text\": \"$REPO_NAME\"
+                   },
+                   \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"
+                 }]
+               }" \
+               "$DISCORD_WEBHOOK_URL"
