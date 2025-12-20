@@ -47,33 +47,20 @@ export type RecipeSelector = (
 const defaultRecipeSelector: RecipeSelector = (recipes) => recipes[0];
 
 export const smartRecipeSelector: RecipeSelector = (recipes, visitedPath) => {
-  // If no visited path provided, fall back to first recipe
   if (!visitedPath || visitedPath.size === 0) {
     return defaultRecipeSelector(recipes);
   }
 
   // Find recipes that don't create circular dependencies
   const nonCircularRecipes = recipes.filter((recipe) => {
-    // Check if any input would create a circular dependency with visited path
+    // Check if any input would create a circular dependency
     const hasCircularInput = recipe.inputs.some((input) =>
       visitedPath.has(input.itemId),
     );
 
-    // Check if any output (other than the main product) would create a circular dependency with visited path
-    const hasCircularOutput = recipe.outputs.some((output) =>
-      visitedPath.has(output.itemId),
-    );
-
-    // Check if recipe has self-loop: same item appears in both inputs and outputs
-    const hasSelfLoop = recipe.inputs.some((input) =>
-      recipe.outputs.some((output) => output.itemId === input.itemId),
-    );
-
-    const hasCircular = hasCircularInput || hasCircularOutput || hasSelfLoop;
-    return !hasCircular;
+    return !hasCircularInput;
   });
 
-  // Return first non-circular recipe if available, otherwise fall back to first recipe
   return nonCircularRecipes.length > 0
     ? nonCircularRecipes[0]
     : defaultRecipeSelector(recipes);
@@ -206,52 +193,52 @@ function mergeProductionNodes(
  */
 function topologicalSort(mergedNodes: Map<string, MergedNode>): string[] {
   const sortedKeys: string[] = [];
-  const inDegree = new Map<string, number>();
+  const dependentCount = new Map<string, number>();
   const keyToNode = new Map(mergedNodes);
 
-  // Initialize in-degrees (number of consumers)
-  keyToNode.forEach((_, key) => inDegree.set(key, 0));
+  // Initialize dependent counts (how many nodes depend on this node)
+  keyToNode.forEach((_, key) => dependentCount.set(key, 0));
 
-  // Calculate initial in-degrees
+  // Calculate dependent counts for each node
   keyToNode.forEach((node) => {
     node.dependencies.forEach((depKey) => {
-      // Increment the in-degree of the dependency (producer)
+      // Increment the dependent count of the dependency (producer)
       if (keyToNode.has(depKey)) {
-        inDegree.set(depKey, (inDegree.get(depKey) || 0) + 1);
+        dependentCount.set(depKey, (dependentCount.get(depKey) || 0) + 1);
       }
     });
   });
 
-  // Initialize the queue with nodes that have no consumers (in-degree of 0), these are the final products.
+  // Initialize the queue with nodes that have no dependents (final products)
   const queue: string[] = [];
   keyToNode.forEach((_, key) => {
-    if (inDegree.get(key) === 0) {
+    if (dependentCount.get(key) === 0) {
       queue.push(key);
     }
   });
 
-  // Process nodes from consumers to producers (reverse order of final output)
+  // Process nodes from final products to raw materials
   while (queue.length > 0) {
     const key = queue.shift()!;
     sortedKeys.push(key);
 
     const node = keyToNode.get(key)!;
 
-    // Decrement the in-degree of dependencies.
+    // Decrement the dependent count of dependencies
     node.dependencies.forEach((depKey) => {
       if (keyToNode.has(depKey)) {
-        const currentInDegree = inDegree.get(depKey)! - 1;
-        inDegree.set(depKey, currentInDegree);
+        const currentCount = dependentCount.get(depKey)! - 1;
+        dependentCount.set(depKey, currentCount);
 
-        // If a dependency now has no remaining consumers, add it to the queue.
-        if (currentInDegree === 0) {
+        // If a dependency now has no remaining dependents, add it to the queue
+        if (currentCount === 0) {
           queue.push(depKey);
         }
       }
     });
   }
 
-  // The sort initially goes from consumers to producers. Reverse it to get the desired producer-to-consumer order.
+  // Reverse to get producer-to-consumer order
   return sortedKeys.reverse();
 }
 
@@ -427,7 +414,11 @@ function calculateNode(
     };
   }
 
-  // Recipe selection logic
+  // Add current item to visited path BEFORE recipe selection
+  const newVisitedPath = new Set(visitedPath);
+  newVisitedPath.add(itemId);
+
+  // Recipe selection logic - now with current item in visitedPath
   let selectedRecipe: Recipe;
   if (recipeOverrides?.has(itemId)) {
     const overrideRecipe = maps.recipeMap.get(recipeOverrides.get(itemId)!);
@@ -435,7 +426,7 @@ function calculateNode(
       throw new Error(`Override recipe not found for ${itemId}`);
     selectedRecipe = overrideRecipe;
   } else {
-    selectedRecipe = recipeSelector(availableRecipes, visitedPath);
+    selectedRecipe = recipeSelector(availableRecipes, newVisitedPath);
   }
 
   const facility = maps.facilityMap.get(selectedRecipe.facilityId);
@@ -451,13 +442,8 @@ function calculateNode(
   // Calculate required facilities
   const facilityCount = requiredRate / outputRatePerFacility;
 
-  // Add the current item to the visited path for dependency detection
-  const newVisitedPath = new Set(visitedPath);
-  newVisitedPath.add(itemId);
-
   // Recursively calculate dependencies (inputs)
   const dependencies = selectedRecipe.inputs.map((input) => {
-    // Calculate the required input rate for the total facility count
     const inputRate = input.amount * cyclesPerMinute * facilityCount;
     return calculateNode(
       input.itemId,
