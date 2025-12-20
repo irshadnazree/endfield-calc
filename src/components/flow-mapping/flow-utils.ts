@@ -171,3 +171,11 @@ export function findTargetsWithDownstream(
 
   return targetsWithDownstream;
 }
+
+export function shouldSkipNode(
+  node: ProductionNode,
+  nodeKey: string,
+  targetsWithDownstream: Set<string>,
+): boolean {
+  return node.isTarget && !targetsWithDownstream.has(nodeKey);
+}

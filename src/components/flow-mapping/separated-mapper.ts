@@ -1,6 +1,6 @@
 import { Position, MarkerType } from "@xyflow/react";
 import type { Node, Edge } from "@xyflow/react";
-import type { Item, Facility } from "@/types";
+import type { Item, Facility, Recipe } from "@/types";
 import type { ProductionNode } from "@/lib/calculator";
 import type {
   FlowProductionNode,
@@ -16,6 +16,7 @@ import {
   makeNodeIdFromKey,
   type AggregatedProductionNodeData,
   findTargetsWithDownstream,
+  shouldSkipNode,
 } from "./flow-utils";
 
 /**
@@ -115,11 +116,7 @@ export function mapPlanToFlowSeparated(
   sortedKeys.forEach((key) => {
     const aggregatedData = nodeMap.get(key)!;
 
-    // Skip creating pool for targets without downstream
-    const isTargetWithoutDownstream =
-      aggregatedData.node.isTarget && !targetsWithDownstream.has(key);
-
-    if (isTargetWithoutDownstream) {
+    if (shouldSkipNode(aggregatedData.node, key, targetsWithDownstream)) {
       return;
     }
 
@@ -141,11 +138,7 @@ export function mapPlanToFlowSeparated(
   nodeMap.forEach((aggregatedData, key) => {
     const node = aggregatedData.node;
 
-    // Skip creating production nodes for targets without downstream
-    const isTargetWithoutDownstream =
-      node.isTarget && !targetsWithDownstream.has(key);
-
-    if (isTargetWithoutDownstream) {
+    if (shouldSkipNode(node, key, targetsWithDownstream)) {
       return;
     }
 
@@ -229,11 +222,7 @@ export function mapPlanToFlowSeparated(
     const consumerData = nodeMap.get(consumerKey)!;
     const consumerNode = consumerData.node;
 
-    // Skip targets without downstream and raw materials
-    const isTargetWithoutDownstream =
-      consumerNode.isTarget && !targetsWithDownstream.has(consumerKey);
-
-    if (isTargetWithoutDownstream || consumerNode.isRawMaterial) {
+    if (shouldSkipNode(consumerNode, consumerKey, targetsWithDownstream)) {
       return;
     }
 
@@ -247,23 +236,17 @@ export function mapPlanToFlowSeparated(
         const depKey = createFlowNodeKey(dependency);
 
         const recipe = consumerNode.recipe!;
-        const inputItem = recipe.inputs.find(
-          (inp) => inp.itemId === dependency.item.id,
-        );
-        const outputItem = recipe.outputs.find(
-          (out) => out.itemId === consumerNode.item.id,
+        const demandRate = calculateDemandRate(
+          recipe,
+          dependency.item.id,
+          consumerNode.item.id,
+          consumerOutputRate,
         );
 
-        if (!inputItem || !outputItem) {
-          console.warn(
-            `Recipe mismatch for ${consumerNode.item.id}: missing input or output`,
-          );
+        if (demandRate === null) {
+          console.warn(`Recipe mismatch for ${consumerNode.item.id}`);
           return;
         }
-
-        // Calculate the input rate needed for this consumer's output rate
-        const inputOutputRatio = inputItem.amount / outputItem.amount;
-        const demandRate = inputOutputRatio * consumerOutputRate;
 
         // Allocate capacity from producer pool
         if (dependency.isRawMaterial) {
@@ -364,17 +347,14 @@ export function mapPlanToFlowSeparated(
         const recipe = targetNode.recipe;
         if (!recipe) return;
 
-        const inputItem = recipe.inputs.find(
-          (inp) => inp.itemId === dep.item.id,
-        );
-        const outputItem = recipe.outputs.find(
-          (out) => out.itemId === targetNode.item.id,
+        const demandRate = calculateDemandRate(
+          recipe,
+          dep.item.id,
+          targetNode.item.id,
+          data.totalRate,
         );
 
-        if (!inputItem || !outputItem) return;
-
-        const inputOutputRatio = inputItem.amount / outputItem.amount;
-        const demandRate = inputOutputRatio * data.totalRate;
+        if (demandRate === null) return;
 
         if (dep.isRawMaterial) {
           const rawMaterialNodeId = makeNodeIdFromKey(depKey);
@@ -425,4 +405,20 @@ export function mapPlanToFlowSeparated(
     )[],
     edges: styledEdges,
   };
+}
+
+function calculateDemandRate(
+  recipe: Recipe,
+  inputItemId: string,
+  outputItemId: string,
+  outputRate: number,
+): number | null {
+  const input = recipe.inputs.find((i) => i.itemId === inputItemId);
+  const output = recipe.outputs.find((o) => o.itemId === outputItemId);
+
+  if (!input || !output) {
+    return null;
+  }
+
+  return (input.amount / output.amount) * outputRate;
 }
