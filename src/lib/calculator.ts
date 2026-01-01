@@ -6,6 +6,7 @@ import type {
   RecipeId,
   FacilityId,
 } from "@/types";
+import { topologicalSort } from "./utils";
 
 /**
  * Represents a single step in the production chain.
@@ -143,7 +144,14 @@ function mergeProductionNodes(
   const merged = new Map<string, MergedNode>();
 
   traverseTree(rootNodes, (node) => {
-    if (isCircularDep(node, producedItemIds)) return;
+    // Inline isCircularDep check
+    if (
+      !node.isCyclePlaceholder &&
+      node.isRawMaterial &&
+      producedItemIds.has(node.item.id)
+    ) {
+      return;
+    }
 
     const key = createNodeKey(
       node.item.id,
@@ -196,41 +204,6 @@ function mergeProductionNodes(
   });
 
   return merged;
-}
-
-/** Topological sort from producers to consumers */
-function topologicalSort(merged: Map<string, MergedNode>): string[] {
-  const dependentCount = new Map<string, number>();
-
-  merged.forEach((_, key) => dependentCount.set(key, 0));
-  merged.forEach((node) => {
-    node.dependencies.forEach((depKey) => {
-      if (merged.has(depKey)) {
-        dependentCount.set(depKey, (dependentCount.get(depKey) || 0) + 1);
-      }
-    });
-  });
-
-  const queue: string[] = [];
-  dependentCount.forEach((count, key) => {
-    if (count === 0) queue.push(key);
-  });
-
-  const sorted: string[] = [];
-  while (queue.length > 0) {
-    const key = queue.shift()!;
-    sorted.push(key);
-
-    merged.get(key)!.dependencies.forEach((depKey) => {
-      if (merged.has(depKey)) {
-        const newCount = dependentCount.get(depKey)! - 1;
-        dependentCount.set(depKey, newCount);
-        if (newCount === 0) queue.push(depKey);
-      }
-    });
-  }
-
-  return sorted.reverse();
 }
 
 /** Calculates depth levels for nodes */
@@ -752,7 +725,10 @@ function processMergedPlan(rootNodes: ProductionNode[]): Omit<
 } {
   const producedItemIds = collectProducedItems(rootNodes);
   const mergedNodes = mergeProductionNodes(rootNodes, producedItemIds);
-  const sortedKeys = topologicalSort(mergedNodes);
+  const sortedKeys = topologicalSort(
+    mergedNodes,
+    (node) => node.dependencies,
+  ).reverse();
   const sortedByLevelAndTier = sortByLevelAndTier(sortedKeys, mergedNodes);
 
   return {

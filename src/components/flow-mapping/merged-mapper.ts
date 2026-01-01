@@ -1,4 +1,4 @@
-import { Position, MarkerType } from "@xyflow/react";
+import { Position } from "@xyflow/react";
 import type { Node, Edge } from "@xyflow/react";
 import type { Item, Facility, ItemId } from "@/types";
 import type { ProductionNode, DetectedCycle } from "@/lib/calculator";
@@ -9,6 +9,7 @@ import {
   aggregateProductionNodes,
   findTargetsWithDownstream,
   createCycleInfo,
+  createEdge,
 } from "./flow-utils";
 
 /**
@@ -56,12 +57,10 @@ export function mapPlanToFlowMerged(
     }
 
     const key = createFlowNodeKey(node);
-    if (nodeKeyToId.has(key)) {
-      return nodeKeyToId.get(key)!;
+    if (!nodeKeyToId.has(key)) {
+      nodeKeyToId.set(key, `node-${key}`);
     }
-    const nodeId = `node-${key}`;
-    nodeKeyToId.set(key, nodeId);
-    return nodeId;
+    return nodeKeyToId.get(key)!;
   };
 
   const getNodeLevel = (node: ProductionNode, key: string): number => {
@@ -78,82 +77,68 @@ export function mapPlanToFlowMerged(
     const nodeId = getOrCreateNodeId(node);
     const key = createFlowNodeKey(node);
 
+    // Handle cycle placeholder
     if (node.isCyclePlaceholder) {
       if (parentId && parentId !== nodeId) {
-        const flowRate = node.targetRate;
-        const edgeExists = edges.some(
-          (e) => e.source === nodeId && e.target === parentId,
+        const sourceLevel = getNodeLevel(node, key);
+        const targetLevel = parentKey
+          ? getNodeLevel(node, parentKey)
+          : sourceLevel;
+        const handlePositions = determineHandlePositions(
+          sourceLevel,
+          targetLevel,
+          true,
         );
 
-        if (!edgeExists) {
-          const sourceLevel = getNodeLevel(node, key);
-          const targetLevel = parentKey
-            ? getNodeLevel(node, parentKey)
-            : sourceLevel;
-          const handlePositions = determineHandlePositions(
-            sourceLevel,
-            targetLevel,
-            true,
-          );
-
-          edges.push(
-            createEdge(
-              `e${edgeIdCounter.count++}`,
-              nodeId,
-              parentId,
-              flowRate,
-              {
-                isPartOfCycle: true,
-                ...handlePositions,
-              },
-            ),
-          );
-        }
+        edges.push(
+          createEdge(
+            `e${edgeIdCounter.count++}`,
+            nodeId,
+            parentId,
+            node.targetRate,
+            {
+              isPartOfCycle: true,
+              ...handlePositions,
+            },
+          ),
+        );
       }
       return nodeId;
     }
 
-    // 内联 shouldSkipNode
-    const isTargetWithoutDownstream =
-      node.isTarget && !targetsWithDownstream.has(key);
-
-    if (isTargetWithoutDownstream) {
+    // Skip targets without downstream (inline shouldSkipNode)
+    if (node.isTarget && !targetsWithDownstream.has(key)) {
       node.dependencies.forEach((dep) => traverse(dep, null, edgeIdCounter));
       return nodeId;
     }
 
+    // Create production node if not exists
     if (!nodes.find((n) => n.id === nodeId)) {
       const aggregatedData = aggregatedNodes.get(key)!;
-      const isCircular = node.isRawMaterial && node.recipe !== null;
       const isDirectTarget = node.isTarget && targetsWithDownstream.has(key);
-
-      const aggregatedNode: ProductionNode = {
-        ...aggregatedData.node,
-        targetRate: aggregatedData.totalRate,
-        facilityCount: aggregatedData.totalFacilityCount,
-      };
-
-      const cycleInfo = createCycleInfo(
-        aggregatedData.node,
-        detectedCycles,
-        itemMap,
-      );
-      const level = getNodeLevel(aggregatedData.node, key);
 
       nodes.push({
         id: nodeId,
         type: "productionNode",
         data: {
-          productionNode: aggregatedNode,
-          isCircular,
+          productionNode: {
+            ...aggregatedData.node,
+            targetRate: aggregatedData.totalRate,
+            facilityCount: aggregatedData.totalFacilityCount,
+          },
+          isCircular: node.isRawMaterial && node.recipe !== null,
           items,
           facilities,
           isDirectTarget,
           directTargetRate: isDirectTarget
             ? aggregatedData.totalRate
             : undefined,
-          cycleInfo,
-          level,
+          cycleInfo: createCycleInfo(
+            aggregatedData.node,
+            detectedCycles,
+            itemMap,
+          ),
+          level: getNodeLevel(aggregatedData.node, key),
         },
         position: { x: 0, y: 0 },
         sourcePosition: Position.Right,
@@ -161,8 +146,8 @@ export function mapPlanToFlowMerged(
       });
     }
 
+    // Create edge to parent
     if (parentId && parentId !== nodeId) {
-      const flowRate = node.targetRate;
       const edgeExists = edges.some(
         (e) => e.source === nodeId && e.target === parentId,
       );
@@ -185,10 +170,16 @@ export function mapPlanToFlowMerged(
         );
 
         edges.push(
-          createEdge(`e${edgeIdCounter.count++}`, nodeId, parentId, flowRate, {
-            isPartOfCycle,
-            ...handlePositions,
-          }),
+          createEdge(
+            `e${edgeIdCounter.count++}`,
+            nodeId,
+            parentId,
+            node.targetRate,
+            {
+              isPartOfCycle,
+              ...handlePositions,
+            },
+          ),
         );
       }
     }
@@ -246,49 +237,30 @@ export function mapPlanToFlowMerged(
         ),
       );
     } else {
-      const targetNode = data.node;
-      targetNode.dependencies.forEach((dep) => {
-        const depNodeId = getOrCreateNodeId(dep);
-        const recipe = targetNode.recipe;
-        if (!recipe) return;
-
-        const inputItem = recipe.inputs.find(
-          (inp) => inp.itemId === dep.item.id,
-        );
-        const outputItem = recipe.outputs.find(
-          (out) => out.itemId === targetNode.item.id,
-        );
-        if (!inputItem || !outputItem) return;
-
-        const flowRate =
-          (inputItem.amount / outputItem.amount) * data.totalRate;
-        edges.push(
-          createEdge(
-            `e${edgeIdCounter.count++}`,
-            depNodeId,
-            targetNodeId,
-            flowRate,
-            {
-              animated: true,
-              style: { stroke: "#10b981", strokeWidth: 2 },
-            },
-          ),
-        );
-      });
+      edges.push(
+        ...createTargetDependencyEdges(
+          data.node,
+          targetNodeId,
+          data.totalRate,
+          getOrCreateNodeId,
+          edgeIdCounter,
+        ),
+      );
     }
   });
-
-  const styledEdges = applyEdgeStyling(edges);
 
   return {
     nodes: [...nodes, ...targetSinkNodes] as (
       | FlowProductionNode
       | FlowTargetNode
     )[],
-    edges: styledEdges,
+    edges: applyEdgeStyling(edges),
   };
 }
 
+/**
+ * Helper: Determines if an edge is part of a production cycle
+ */
 function isEdgePartOfCycle(
   sourceItemId: ItemId,
   targetNodeId: string,
@@ -309,6 +281,9 @@ function isEdgePartOfCycle(
   return false;
 }
 
+/**
+ * Helper: Determines handle positions based on node levels
+ */
 function determineHandlePositions(
   sourceLevel: number,
   targetLevel: number,
@@ -333,37 +308,43 @@ function determineHandlePositions(
   };
 }
 
-// 新增：统一的边创建函数
-function createEdge(
-  id: string,
-  source: string,
-  target: string,
-  flowRate: number,
-  options: {
-    isPartOfCycle?: boolean;
-    animated?: boolean;
-    style?: React.CSSProperties;
-    sourceHandle?: string;
-    targetHandle?: string;
-  } = {},
-): Edge {
-  return {
-    id,
-    source,
-    target,
-    type: "default",
-    label: `${flowRate.toFixed(2)} /min`,
-    data: {
-      flowRate,
-      isPartOfCycle: options.isPartOfCycle,
-    },
-    sourceHandle: options.sourceHandle,
-    targetHandle: options.targetHandle,
-    animated: options.animated,
-    style: options.style,
-    markerEnd: {
-      type: MarkerType.ArrowClosed,
-      color: options.style?.stroke as string,
-    },
-  };
+/**
+ * Helper: Creates edges for target dependencies
+ */
+function createTargetDependencyEdges(
+  targetNode: ProductionNode,
+  targetNodeId: string,
+  totalRate: number,
+  getOrCreateNodeId: (node: ProductionNode) => string,
+  edgeIdCounter: { count: number },
+): Edge[] {
+  const edges: Edge[] = [];
+  const recipe = targetNode.recipe;
+  if (!recipe) return edges;
+
+  targetNode.dependencies.forEach((dep) => {
+    const depNodeId = getOrCreateNodeId(dep);
+    const inputItem = recipe.inputs.find((inp) => inp.itemId === dep.item.id);
+    const outputItem = recipe.outputs.find(
+      (out) => out.itemId === targetNode.item.id,
+    );
+
+    if (!inputItem || !outputItem) return;
+
+    const flowRate = (inputItem.amount / outputItem.amount) * totalRate;
+    edges.push(
+      createEdge(
+        `e${edgeIdCounter.count++}`,
+        depNodeId,
+        targetNodeId,
+        flowRate,
+        {
+          animated: true,
+          style: { stroke: "#10b981", strokeWidth: 2 },
+        },
+      ),
+    );
+  });
+
+  return edges;
 }

@@ -2,6 +2,7 @@ import type { ItemId } from "@/types";
 import type { DetectedCycle, ProductionNode } from "@/lib/calculator";
 import type { CycleInfo } from "./types";
 import { getItemName } from "@/lib/i18n-helpers";
+import { MarkerType, type Edge } from "@xyflow/react";
 
 /**
  * Creates a stable key for a ProductionNode.
@@ -213,4 +214,51 @@ export function isCircularBreakpoint(
   return detectedCycles.some(
     (cycle) => cycle.breakPointItemId === node.item.id,
   );
+}
+
+/**
+ * Creates a standardized edge for React Flow
+ */
+export function createEdge(
+  id: string,
+  source: string,
+  target: string,
+  flowRate: number,
+  options: {
+    isPartOfCycle?: boolean;
+    isCycleClosure?: boolean;
+    animated?: boolean;
+    style?: React.CSSProperties;
+    labelStyle?: React.CSSProperties;
+    labelBgStyle?: React.CSSProperties;
+    sourceHandle?: string;
+    targetHandle?: string;
+  } = {},
+): Edge {
+  const label = options.isCycleClosure
+    ? `🔄 ${flowRate.toFixed(2)} /min`
+    : `${flowRate.toFixed(2)} /min`;
+
+  return {
+    id,
+    source,
+    target,
+    type: "default",
+    label,
+    data: {
+      flowRate,
+      isPartOfCycle: options.isPartOfCycle,
+      isCycleClosure: options.isCycleClosure,
+    },
+    sourceHandle: options.sourceHandle,
+    targetHandle: options.targetHandle,
+    animated: options.animated,
+    style: options.style,
+    labelStyle: options.labelStyle,
+    labelBgStyle: options.labelBgStyle,
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      color: (options.style?.stroke as string) || "#64748b",
+    },
+  };
 }
