@@ -107,7 +107,6 @@ export function mapPlanToFlowMerged(
             targetRate: aggregatedData.totalRate,
             facilityCount: aggregatedData.totalFacilityCount,
           },
-          isCircular: node.isRawMaterial && node.recipe !== null,
           items,
           facilities,
           isDirectTarget,

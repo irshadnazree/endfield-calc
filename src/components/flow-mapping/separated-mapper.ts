@@ -11,7 +11,6 @@ import {
   type AggregatedProductionNodeData,
   findTargetsWithDownstream,
   shouldSkipNode,
-  isCircularBreakpoint,
   createEdge,
 } from "./flow-utils";
 import { calculateDemandRate, topologicalSort } from "@/lib/utils";
@@ -38,6 +37,23 @@ function topologicalSortNodes(
     });
     return deps;
   });
+}
+
+/**
+ * Checks if a node is a circular breakpoint (a raw material node that's actually produced in a cycle).
+ *
+ * @param node The production node to check
+ * @param detectedCycles All detected cycles
+ * @returns True if this node is a breakpoint in any cycle
+ */
+function isCircularBreakpoint(
+  node: ProductionNode,
+  detectedCycles: DetectedCycle[],
+): boolean {
+  if (!node.isRawMaterial) return false;
+  return detectedCycles.some(
+    (cycle) => cycle.breakPointItemId === node.item.id,
+  );
 }
 
 /**
@@ -261,7 +277,7 @@ export function mapPlanToFlowSeparated(
         });
     } else {
       edges.push(
-        ...createTargetDependencyEdgesWithCycles(
+        ...createTargetDependencyEdges(
           data.node,
           targetNodeId,
           data.totalRate,
@@ -275,81 +291,6 @@ export function mapPlanToFlowSeparated(
     }
   });
 
-  // Add cycle closure edges
-  detectedCycles.forEach((cycle) => {
-    const breakPointItemId = cycle.breakPointItemId;
-    if (cycle.involvedItemIds.length < 2) return;
-
-    const breakPointIndex = cycle.involvedItemIds.indexOf(breakPointItemId);
-    const consumerIndex = (breakPointIndex + 1) % cycle.involvedItemIds.length;
-    const consumerItemId = cycle.involvedItemIds[consumerIndex];
-
-    const breakPointProductionKey = findProductionKeyForItem(
-      breakPointItemId,
-      nodeMap,
-    );
-    const consumerProductionKey = findProductionKeyForItem(
-      consumerItemId,
-      nodeMap,
-    );
-
-    if (!breakPointProductionKey || !consumerProductionKey) return;
-
-    const breakPointFacilities = poolManager.getFacilityInstances(
-      breakPointProductionKey,
-    );
-    const consumerFacilities = poolManager.getFacilityInstances(
-      consumerProductionKey,
-    );
-
-    if (breakPointFacilities.length === 0 || consumerFacilities.length === 0)
-      return;
-
-    const consumerNode = nodeMap.get(consumerProductionKey)?.node;
-    if (!consumerNode?.recipe) return;
-
-    const breakPointInput = consumerNode.recipe.inputs.find(
-      (i) => i.itemId === breakPointItemId,
-    );
-    const consumerOutput = consumerNode.recipe.outputs.find(
-      (o) => o.itemId === consumerItemId,
-    );
-    if (!breakPointInput || !consumerOutput) return;
-
-    const totalConsumerRate = consumerFacilities.reduce(
-      (sum, f) => sum + f.actualOutputRate,
-      0,
-    );
-    const totalFlowRate =
-      (breakPointInput.amount / consumerOutput.amount) * totalConsumerRate;
-
-    let remainingFlow = totalFlowRate;
-    let consumerIdx = 0;
-
-    breakPointFacilities.forEach((breakPointFacility, idx) => {
-      if (remainingFlow <= 0.001) return;
-
-      const flowFromThisFacility = Math.min(
-        breakPointFacility.actualOutputRate,
-        remainingFlow,
-      );
-      const targetConsumer =
-        consumerFacilities[consumerIdx % consumerFacilities.length];
-
-      edges.push(
-        createEdge(
-          `cycle-closure-${cycle.cycleId}-${idx}`,
-          breakPointFacility.facilityId,
-          targetConsumer.facilityId,
-          flowFromThisFacility,
-        ),
-      );
-
-      remainingFlow -= flowFromThisFacility;
-      consumerIdx++;
-    });
-  });
-
   return {
     nodes: [...flowNodes, ...targetSinkNodes],
     edges: edges,
@@ -359,7 +300,7 @@ export function mapPlanToFlowSeparated(
 /**
  * Helper: Creates target dependency edges with cycle awareness
  */
-function createTargetDependencyEdgesWithCycles(
+function createTargetDependencyEdges(
   targetNode: ProductionNode,
   targetNodeId: string,
   totalRate: number,
@@ -464,7 +405,6 @@ function createProductionFlowNode(
     type: "productionNode",
     data: {
       productionNode: node,
-      isCircular: false,
       items,
       facilities,
       facilityIndex,

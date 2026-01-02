@@ -15,7 +15,6 @@ export type VisualizationMode = "merged" | "separated";
  */
 export interface FlowNodeData {
   productionNode: ProductionNode;
-  isCircular: boolean;
   items: Item[];
   facilities: Facility[];
   level?: number;
@@ -147,6 +146,5 @@ export type FlowProductionNode =
 declare module "@xyflow/react" {
   interface EdgeData {
     flowRate?: number;
-    isPartOfCycle?: boolean;
   }
 }

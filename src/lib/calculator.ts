@@ -27,8 +27,6 @@ export type ProductionNode = {
   // Cycle support fields
   isCyclePlaceholder?: boolean;
   cycleItemId?: ItemId;
-  isPartOfCycle?: boolean;
-  cycleId?: string;
 };
 
 /**
@@ -551,7 +549,6 @@ function buildDependencyTree(
         dependencies: [],
         isCyclePlaceholder: true,
         cycleItemId: itemId,
-        cycleId,
       };
     }
 
@@ -693,8 +690,6 @@ function buildDependencyTree(
         if (node.recipe && solution.has(node.recipe.id)) {
           const solvedCount = solution.get(node.recipe.id)!;
           node.facilityCount = solvedCount;
-          node.isPartOfCycle = true;
-          node.cycleId = cycle.cycleId;
 
           node.recipe.inputs.forEach((input, index) => {
             if (node.dependencies[index]) {

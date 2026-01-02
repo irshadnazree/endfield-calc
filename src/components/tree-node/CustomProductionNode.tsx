@@ -67,7 +67,7 @@ function hasTargetInfo(
 export default function CustomProductionNode({
   data,
 }: NodeProps<FlowProductionNode>) {
-  const { productionNode: node, isCircular, items } = data;
+  const { productionNode: node, items } = data;
   const { t } = useTranslation("production");
 
   /**
@@ -105,11 +105,7 @@ export default function CustomProductionNode({
       </div>
       {node.isRawMaterial ? (
         <div>
-          <p className="text-muted-foreground">
-            {isCircular
-              ? t("tree.circularRawMaterial")
-              : t("tree.trueRawMaterial")}
-          </p>
+          <p className="text-muted-foreground">{t("tree.trueRawMaterial")}</p>
         </div>
       ) : node.recipe ? (
         <>
@@ -157,8 +153,6 @@ export default function CustomProductionNode({
   // CSS classes for facility block and circular warning for consistent styling
   const facilityBlockClasses =
     "flex items-center justify-between bg-blue-100/70 dark:bg-blue-900/50 rounded-lg px-2 py-1 transition-colors";
-  const circularWarningClasses =
-    "text-red-600 dark:text-red-400 font-medium text-[10px] mt-2 text-center py-0.5 rounded bg-red-100/70 dark:bg-red-900/30";
   const partialLoadClasses =
     "text-yellow-600 dark:text-yellow-400 font-medium text-[10px] mt-1 text-center py-0.5 rounded bg-yellow-100/70 dark:bg-yellow-900/30";
 
@@ -168,36 +162,13 @@ export default function CustomProductionNode({
         <Card
           className={`w-52 shadow-lg ${borderColor} border-2 hover:shadow-xl transition-shadow cursor-help relative`}
         >
-          {/* Multiple target handles for different directions */}
+          {/* target handle */}
           <Handle
             type="target"
             position={Position.Left}
             id="left"
             isConnectable={false}
             className="w-3! h-3!"
-          />
-          <Handle
-            type="target"
-            position={Position.Top}
-            id="top"
-            isConnectable={false}
-            className="w-3! h-3!"
-          />
-          <Handle
-            type="target"
-            position={Position.Right}
-            id="right"
-            isConnectable={false}
-            className="w-3! h-3! opacity-30!"
-            style={{ pointerEvents: "none" }}
-          />
-          <Handle
-            type="target"
-            position={Position.Bottom}
-            id="bottom"
-            isConnectable={false}
-            className="w-3! h-3! opacity-30!"
-            style={{ pointerEvents: "none" }}
           />
           <CardContent className="p-3 text-xs">
             {/* Item icon and name */}
@@ -269,44 +240,14 @@ export default function CustomProductionNode({
                 ⚡ {t("tree.partialLoad")}
               </div>
             )}
-
-            {/* Circular dependency warning - keep only for true circular deps */}
-            {isCircular && (
-              <div className={circularWarningClasses}>
-                ⚠️ {t("tree.circularWarning")}
-              </div>
-            )}
           </CardContent>
-          {/* Multiple source handles for different directions */}
+          {/*  source handle */}
           <Handle
             type="source"
             position={Position.Right}
             id="right"
             isConnectable={false}
             className="w-3! h-3!"
-          />
-          <Handle
-            type="source"
-            position={Position.Bottom}
-            id="bottom"
-            isConnectable={false}
-            className="w-3! h-3!"
-          />
-          <Handle
-            type="source"
-            position={Position.Left}
-            id="left"
-            isConnectable={false}
-            className="w-3! h-3! opacity-30!"
-            style={{ pointerEvents: "none" }}
-          />
-          <Handle
-            type="source"
-            position={Position.Top}
-            id="top"
-            isConnectable={false}
-            className="w-3! h-3! opacity-30!"
-            style={{ pointerEvents: "none" }}
           />
         </Card>
       </TooltipTrigger>

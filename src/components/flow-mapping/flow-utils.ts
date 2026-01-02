@@ -1,4 +1,4 @@
-import type { DetectedCycle, ProductionNode } from "@/lib/calculator";
+import type { ProductionNode } from "@/lib/calculator";
 import { MarkerType, type Edge } from "@xyflow/react";
 
 /**
@@ -152,26 +152,6 @@ export function shouldSkipNode(
   targetsWithDownstream: Set<string>,
 ): boolean {
   return node.isTarget && !targetsWithDownstream.has(nodeKey);
-}
-
-/**
- * Checks if a node is a circular breakpoint (a raw material node that's actually produced in a cycle).
- *
- * @param node The production node to check
- * @param detectedCycles All detected cycles
- * @returns True if this node is a breakpoint in any cycle
- */
-export function isCircularBreakpoint(
-  node: ProductionNode,
-  detectedCycles: DetectedCycle[],
-): boolean {
-  if (!node.isRawMaterial) {
-    return false;
-  }
-
-  return detectedCycles.some(
-    (cycle) => cycle.breakPointItemId === node.item.id,
-  );
 }
 
 /**
