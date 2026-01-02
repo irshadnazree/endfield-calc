@@ -19,26 +19,36 @@ jobs:
           RELEASE_PRERELEASE: ${{ github.event.release.prerelease }}
           REPO_NAME: ${{ github.repository }}
         run: |
-          # Determine embed color
-          if [ "$RELEASE_PRERELEASE" = "true" ]; then
-            COLOR=16776960  # Yellow
-          else
-            COLOR=5763719   # Green
+          set -e
+
+          # Validate webhook URL
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            echo "ERROR: DISCORD_WEBHOOK_URL is not set"
+            exit 1
           fi
 
-          # Truncate body if too long
+          # Determine embed color based on release type
+          if [ "$RELEASE_PRERELEASE" = "true" ]; then
+            COLOR=16776960  # Yellow for pre-release
+          else
+            COLOR=5763719   # Green for stable release
+          fi
+
+          # Provide fallback values for optional fields
+          RELEASE_BODY="${RELEASE_BODY:-}"
+          RELEASE_AUTHOR="${RELEASE_AUTHOR:-Unknown}"
+
+          # Truncate body if it exceeds Discord's limit (4096 chars, use 4000 for safety)
           TRUNC_BODY="$RELEASE_BODY"
           if [ ${#RELEASE_BODY} -gt 4000 ]; then
-            TRUNC_BODY="${RELEASE_BODY:0:3900}...\n\n[View full release notes]($RELEASE_URL)"
+            TRUNC_BODY="$(printf "%s...\n\n[View full release notes](%s)" \
+              "${RELEASE_BODY:0:3900}" "$RELEASE_URL")"
           fi
 
-          # Escape newlines and special characters
-          ESCAPED_BODY=$(echo "$TRUNC_BODY" | sed ':a;N;$!ba;s/\\/\\\\/g;s/"/\\"/g;s/\n/\\n/g')
-
-          # Build JSON payload safely
+          # Build JSON payload using jq (handles escaping automatically)
           PAYLOAD=$(jq -n \
             --arg title "🚀 New Release: $RELEASE_TAG" \
-            --arg description "$ESCAPED_BODY" \
+            --arg description "$TRUNC_BODY" \
             --arg url "$RELEASE_URL" \
             --arg release_name "$RELEASE_NAME" \
             --arg author "$RELEASE_AUTHOR" \
@@ -56,11 +66,13 @@ jobs:
                     {name: "Author", value: $author, inline: true}
                   ],
                   footer: {text: $repo},
-                  timestamp: now | todate
+                  timestamp: (now | strftime("%Y-%m-%dT%H:%M:%SZ"))
                 }
               ]
             }'
           )
 
-          # Send payload to Discord
-          curl -H "Content-Type: application/json" -d "$PAYLOAD" "$DISCORD_WEBHOOK_URL"
+          # Send payload to Discord webhook
+          curl -H "Content-Type: application/json" \
+               -d "$PAYLOAD" \
+               "$DISCORD_WEBHOOK_URL"
