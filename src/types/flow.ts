@@ -2,6 +2,9 @@ import type { Node } from "@xyflow/react";
 import type { Item, Facility, Recipe } from "@/types";
 import type { ProductionNode } from "@/types";
 
+export type EdgeDirection = "forward" | "backward" | "self";
+export type EdgeKey = `${string}->${string}`;
+
 /**
  * Visualization mode for the production dependency tree.
  * - 'merged': Combines identical production steps and shows aggregated facility counts
@@ -146,5 +149,6 @@ export type FlowProductionNode =
 declare module "@xyflow/react" {
   interface EdgeData {
     flowRate?: number;
+    direction?: EdgeDirection;
   }
 }

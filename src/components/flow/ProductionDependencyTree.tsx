@@ -63,20 +63,24 @@ export default function ProductionDependencyTree({
       return { initialNodes: [] as FlowProductionNode[], initialEdges: [] };
     }
 
-    // Select the appropriate mapper based on visualization mode
+    // Select mapper and pass plan for optimization data
     const flowData =
       visualizationMode === "separated"
         ? mapPlanToFlowSeparated(plan.dependencyRootNodes, items, facilities)
-        : mapPlanToFlowMerged(plan.dependencyRootNodes, items, facilities);
+        : mapPlanToFlowMerged(
+            plan.dependencyRootNodes,
+            items,
+            facilities,
+            plan,
+          );
 
-    // Apply layout algorithm to position nodes
+    // Apply layout
     const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
       flowData.nodes,
       flowData.edges,
-      "LR", // Left-to-right layout
+      "LR",
     );
 
-    // Apply edge styling AFTER layout, when nodes have actual positions
     const styledEdges = applyEdgeStyling(layoutedEdges, layoutedNodes);
 
     return {

@@ -5,9 +5,15 @@ import {
 import { items, recipes, facilities } from "@/data";
 import { useState, useMemo, useCallback } from "react";
 import type { ProductionTarget } from "@/components/panels/TargetItemsGrid";
-import type { ItemId, RecipeId, UnifiedProductionPlan } from "@/types";
+import type {
+  ItemId,
+  ProductionNode,
+  RecipeId,
+  UnifiedProductionPlan,
+} from "@/types";
 import type { ProductionLineData } from "@/components/production/ProductionTable";
 import { useTranslation } from "react-i18next";
+import { createFlowNodeKey } from "@/components/flow/flow-utils";
 
 export function useProductionPlan() {
   const { t } = useTranslation("app");
@@ -39,23 +45,43 @@ export function useProductionPlan() {
           manualRawMaterials,
         );
 
-        tableData = plan.flatList.map((node) => {
-          const availableRecipes = recipes.filter((recipe) =>
-            recipe.outputs.some((output) => output.itemId === node.item.id),
-          );
+        // Use weighted levels for sorting
+        tableData = plan.flatList
+          .map((node) => {
+            const availableRecipes = recipes.filter((recipe) =>
+              recipe.outputs.some((output) => output.itemId === node.item.id),
+            );
 
-          return {
-            item: node.item,
-            outputRate: node.targetRate,
-            availableRecipes: availableRecipes,
-            selectedRecipeId: node.recipe?.id ?? "",
-            facility: node.facility ?? null,
-            facilityCount: node.facilityCount ?? 0,
-            isRawMaterial: node.isRawMaterial,
-            isTarget: node.isTarget,
-            isManualRawMaterial: manualRawMaterials.has(node.item.id),
-          };
-        });
+            return {
+              item: node.item,
+              outputRate: node.targetRate,
+              availableRecipes: availableRecipes,
+              selectedRecipeId: (node.recipe?.id ?? "") as RecipeId | "",
+              facility: node.facility ?? null,
+              facilityCount: node.facilityCount ?? 0,
+              isRawMaterial: node.isRawMaterial,
+              isTarget: node.isTarget,
+              isManualRawMaterial: manualRawMaterials.has(node.item.id),
+            };
+          })
+          .sort((a, b) => {
+            // Sort by weighted level (deepest first)
+            const keyA = createFlowNodeKey({
+              item: a.item,
+              recipe: recipes.find((r) => r.id === a.selectedRecipeId) ?? null,
+              isRawMaterial: a.isRawMaterial,
+            } as ProductionNode);
+            const keyB = createFlowNodeKey({
+              item: b.item,
+              recipe: recipes.find((r) => r.id === b.selectedRecipeId) ?? null,
+              isRawMaterial: b.isRawMaterial,
+            } as ProductionNode);
+
+            const levelA = plan!.keyToLevel?.get(keyA) ?? 0;
+            const levelB = plan!.keyToLevel?.get(keyB) ?? 0;
+
+            return levelB - levelA; // Descending order
+          });
       }
     } catch (e) {
       error = e instanceof Error ? e.message : t("calculationError");

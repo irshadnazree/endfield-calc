@@ -7,14 +7,19 @@ import type {
   FlowNodeData,
   FlowProductionNode,
   FlowTargetNode,
+  UnifiedProductionPlan,
 } from "@/types";
-import type {} from "@/lib/calculator";
 import {
   createFlowNodeKey,
   aggregateProductionNodes,
   findTargetsWithDownstream,
   createEdge,
 } from "../flow/flow-utils";
+import {
+  createFlowNodeId,
+  createFlowNodeIdFromNode,
+  createTargetSinkId,
+} from "@/lib/node-keys";
 
 /**
  * Maps a UnifiedProductionPlan to React Flow nodes and edges in merged mode.
@@ -33,11 +38,10 @@ export function mapPlanToFlowMerged(
   rootNodes: ProductionNode[],
   items: Item[],
   facilities: Facility[],
-  keyToLevel?: Map<string, number>,
+  plan: UnifiedProductionPlan,
 ): { nodes: (FlowProductionNode | FlowTargetNode)[]; edges: Edge[] } {
   const nodes: Node<FlowNodeData>[] = [];
   const edges: Edge[] = [];
-  const nodeKeyToId = new Map<string, string>();
   const targetSinkNodes: FlowTargetNode[] = [];
 
   const aggregatedNodes = aggregateProductionNodes(rootNodes);
@@ -51,23 +55,16 @@ export function mapPlanToFlowMerged(
       });
 
       if (productionKey) {
-        if (!nodeKeyToId.has(productionKey)) {
-          nodeKeyToId.set(productionKey, `node-${productionKey}`);
-        }
-        return nodeKeyToId.get(productionKey)!;
+        return createFlowNodeId(productionKey);
       }
     }
 
-    const key = createFlowNodeKey(node);
-    if (!nodeKeyToId.has(key)) {
-      nodeKeyToId.set(key, `node-${key}`);
-    }
-    return nodeKeyToId.get(key)!;
+    return createFlowNodeIdFromNode(node);
   };
 
   const getNodeLevel = (node: ProductionNode, key: string): number => {
     if (node.level !== undefined) return node.level;
-    return keyToLevel?.get(key) || 0;
+    return plan.keyToLevel?.get(key) ?? 0;
   };
 
   const traverse = (
@@ -81,12 +78,14 @@ export function mapPlanToFlowMerged(
     // Handle cycle placeholder
     if (node.isCyclePlaceholder) {
       if (parentId && parentId !== nodeId) {
+        // Cycle edges should use backward direction as they close the loop
         edges.push(
           createEdge(
             `e${edgeIdCounter.count++}`,
             nodeId,
             parentId,
             node.targetRate,
+            "backward", // Cycle edges are inherently backward
           ),
         );
       }
@@ -134,13 +133,11 @@ export function mapPlanToFlowMerged(
       );
 
       if (!edgeExists) {
+        const aggregated = aggregatedNodes.get(key);
+        const flowRate = aggregated ? aggregated.totalRate : node.targetRate;
+
         edges.push(
-          createEdge(
-            `e${edgeIdCounter.count++}`,
-            nodeId,
-            parentId,
-            node.targetRate,
-          ),
+          createEdge(`e${edgeIdCounter.count++}`, nodeId, parentId, flowRate),
         );
       }
     }
@@ -148,6 +145,7 @@ export function mapPlanToFlowMerged(
     node.dependencies.forEach((dep) => traverse(dep, nodeId, edgeIdCounter));
     return nodeId;
   };
+
   const edgeIdCounter = { count: 0 };
   rootNodes.forEach((root) => traverse(root, null, edgeIdCounter));
 
@@ -157,7 +155,7 @@ export function mapPlanToFlowMerged(
   );
 
   targetNodes.forEach(([key, data]) => {
-    const targetNodeId = `target-sink-${data.node.item.id}`;
+    const targetNodeId = createTargetSinkId(data.node.item.id);
     const hasDownstream = targetsWithDownstream.has(key);
 
     targetSinkNodes.push({
@@ -181,7 +179,8 @@ export function mapPlanToFlowMerged(
     });
 
     if (hasDownstream) {
-      const nodeId = `node-${key}`;
+      const nodeId = createFlowNodeId(key);
+
       edges.push(
         createEdge(
           `e${edgeIdCounter.count++}`,

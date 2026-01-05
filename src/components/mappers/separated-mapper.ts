@@ -12,12 +12,12 @@ import { CapacityPoolManager } from "../flow/capacity-pool";
 import {
   createFlowNodeKey,
   aggregateProductionNodes,
-  makeNodeIdFromKey,
   type AggregatedProductionNodeData,
   findTargetsWithDownstream,
   shouldSkipNode,
   createEdge,
 } from "../flow/flow-utils";
+import { createFlowNodeId } from "@/lib/node-keys";
 import { calculateDemandRate, topologicalSort } from "@/lib/utils";
 
 /**
@@ -111,18 +111,7 @@ export function mapPlanToFlowSeparated(
   const nodeMap = aggregateProductionNodes(rootNodes);
   const sortedKeys = topologicalSortNodes(nodeMap);
   const targetsWithDownstream = findTargetsWithDownstream(rootNodes);
-  const producedItemIds = collectProducedItems(nodeMap); // 新增
-
-  console.log("=== NodeMap Debug ===");
-  nodeMap.forEach((data, key) => {
-    console.log(key, {
-      itemId: data.node.item.id,
-      isRawMaterial: data.node.isRawMaterial,
-      hasRecipe: !!data.node.recipe,
-      recipeId: data.node.recipe?.id,
-    });
-  });
-  console.log("=== Produced Items ===", Array.from(producedItemIds));
+  const producedItemIds = collectProducedItems(nodeMap);
 
   // Initialize capacity pools
   const poolManager = new CapacityPoolManager();
@@ -168,7 +157,7 @@ export function mapPlanToFlowSeparated(
     if (node.isRawMaterial) {
       flowNodes.push(
         createProductionFlowNode(
-          makeNodeIdFromKey(key),
+          createFlowNodeId(key),
           {
             ...node,
             targetRate: aggregatedData.totalRate,
@@ -237,7 +226,7 @@ export function mapPlanToFlowSeparated(
 
           if (demandRate === null) return;
 
-          // Check if this dependency is a circular dependency
+          // Check if this is a circular dependency
           if (isCircularDependency(dependency, producedItemIds)) {
             const productionKey = findProductionKeyForItem(
               dependency.item.id,
@@ -261,10 +250,11 @@ export function mapPlanToFlowSeparated(
             const depKey = createFlowNodeKey(dependency);
 
             if (dependency.isRawMaterial) {
+              const sourceNodeId = createFlowNodeId(depKey);
               edges.push(
                 createEdge(
                   `e${edgeIdCounter++}`,
-                  `node-${depKey}`,
+                  sourceNodeId,
                   consumerFacility.facilityId,
                   demandRate,
                 ),
@@ -400,7 +390,7 @@ function createTargetDependencyEdges(
         edges.push(
           createEdge(
             `e${edgeIdCounter.count++}`,
-            `node-${depKey}`,
+            createFlowNodeId(depKey),
             targetNodeId,
             demandRate,
           ),

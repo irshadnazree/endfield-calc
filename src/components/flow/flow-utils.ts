@@ -1,21 +1,8 @@
-import type { ItemId, ProductionNode } from "@/types";
-import { MarkerType, type Edge } from "@xyflow/react";
+import type { EdgeDirection, ItemId, ProductionNode } from "@/types";
+import { MarkerType, type Edge, type Node } from "@xyflow/react";
+import { createNodeKey } from "@/lib/node-keys";
 
-/**
- * Creates a stable key for a ProductionNode.
- *
- * This key is used to identify unique production steps across the dependency tree,
- * allowing proper merging or aggregation of identical nodes.
- *
- * @param node The ProductionNode to create a key for
- * @returns A unique string key for the node
- */
-export const createFlowNodeKey = (node: ProductionNode): string => {
-  const itemId = node.item.id;
-  const recipeId = node.recipe?.id ?? "raw";
-  const rawFlag = node.isRawMaterial ? "raw" : "prod";
-  return `${itemId}__${recipeId}__${rawFlag}`;
-};
+export const createFlowNodeKey = createNodeKey;
 
 /**
  * Aggregated production node data.
@@ -103,15 +90,6 @@ export function aggregateProductionNodes(
 }
 
 /**
- * Generates a stable and readable node ID from a given key.
- * A prefix is added to avoid collisions with other ID formats.
- *
- * @param key The unique key generated for a ProductionNode
- * @returns A formatted node ID
- */
-export const makeNodeIdFromKey = (key: string) => `node-${key}`;
-
-/**
  * Identifies target nodes that serve as upstream dependencies for other targets.
  * These targets need both a production node (marked as target) and a separate target sink.
  *
@@ -173,28 +151,30 @@ export function shouldSkipNode(
 }
 
 /**
- * Creates a standardized edge for React Flow.
- * Edge type and styling will be determined automatically by applyEdgeStyling based on geometry.
+ * Creates a standardized edge for React Flow with optional pre-computed direction.
  *
  * @param id Unique edge identifier
  * @param source Source node ID
  * @param target Target node ID
  * @param flowRate Flow rate in items per minute
+ * @param direction Optional pre-computed direction (from markEdgeDirections)
  */
 export function createEdge(
   id: string,
   source: string,
   target: string,
   flowRate: number,
+  direction?: EdgeDirection,
 ): Edge {
   return {
     id,
     source,
     target,
-    type: "default", // Temporary type, will be set by applyEdgeStyling based on direction
+    type: direction === "backward" ? "backwardEdge" : "simplebezier",
     label: `${flowRate.toFixed(2)} /min`,
     data: {
       flowRate,
+      direction,
     },
     markerEnd: {
       type: MarkerType.ArrowClosed,
@@ -204,26 +184,23 @@ export function createEdge(
 }
 
 /**
- * Applies dynamic styling to edges and automatically selects edge type based on geometry.
- * Should be called AFTER layout is applied, when nodes have actual positions.
- *
- * - Forward edges (source left of target in LR layout): use smoothstep for clean routing
- * - Backward edges (target left of source): use custom backward edge to avoid node overlap
- * - All edges get width proportional to flow rate
- * - All edges get color based on normalized flow rate (heat map: blue→green→red)
+ * Applies dynamic styling to edges based on flow rate and detects backward edges
+ * based on actual node positions (when source X > target X).
  *
  * @param edges Array of edges to style
- * @param nodes Array of nodes with layouted positions
- * @returns The same edges array with style and type properties applied
+ * @param nodes Array of nodes with positions (after layout)
+ * @returns The styled edges array with backward edges using backwardEdge type
  */
-export function applyEdgeStyling(
-  edges: Edge[],
-  nodes: Array<{ id: string; position: { x: number; y: number } }>,
-): Edge[] {
+export function applyEdgeStyling(edges: Edge[], nodes: Node[]): Edge[] {
   if (edges.length === 0) return edges;
 
-  // Build node position map for quick lookup
-  const nodePositions = new Map(nodes.map((n) => [n.id, n.position.x]));
+  // Build a position lookup map for O(1) access
+  const nodePositions = new Map<string, { x: number; y: number }>();
+  nodes.forEach((node) => {
+    if (node.position) {
+      nodePositions.set(node.id, node.position);
+    }
+  });
 
   // Find max flow rate for normalization
   const flowRates: number[] = [];
@@ -238,14 +215,11 @@ export function applyEdgeStyling(
   return edges.map((edge) => {
     const data = edge.data as { flowRate?: number } | undefined;
 
-    // Return unchanged if no valid data
     if (!data || typeof data.flowRate !== "number") {
       return edge;
     }
 
     const flowRate = data.flowRate;
-
-    // Calculate normalized rate (0-1)
     const normalizedRate = flowRate / maxFlowRate;
 
     // Calculate stroke width based on flow rate (1-4 range)
@@ -254,24 +228,15 @@ export function applyEdgeStyling(
     // Calculate color based on normalized flow rate
     const strokeColor = getFlowRateColor(normalizedRate);
 
-    // Determine edge type based on direction (for LR layout)
-    const sourceX = nodePositions.get(edge.source);
-    const targetX = nodePositions.get(edge.target);
+    // Detect backward edge based on actual node positions
+    // If source X > target X, it's a backward edge (goes right to left)
+    const sourcePos = nodePositions.get(edge.source);
+    const targetPos = nodePositions.get(edge.target);
+    const isBackward = sourcePos && targetPos && sourcePos.x > targetPos.x;
 
-    // Only check direction if both positions are available and non-zero
-    const isBackwardEdge =
-      sourceX !== undefined &&
-      targetX !== undefined &&
-      sourceX !== 0 &&
-      targetX !== 0 &&
-      targetX < sourceX - 10; // Add threshold to avoid false positives
-
-    const edgeType = isBackwardEdge ? "backwardEdge" : "simplebezier";
-
-    // Apply heat map color styling
     return {
       ...edge,
-      type: edgeType,
+      type: isBackward ? "backwardEdge" : "simplebezier",
       style: {
         strokeWidth,
         stroke: strokeColor,
@@ -281,7 +246,6 @@ export function applyEdgeStyling(
         type: MarkerType.ArrowClosed,
         color: strokeColor,
       },
-      // Add label background for better readability
       labelBgPadding: [8, 4] as [number, number],
       labelBgBorderRadius: 4,
       labelBgStyle: {

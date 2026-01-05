@@ -10,6 +10,7 @@ import type {
   UnifiedProductionPlan,
 } from "@/types";
 import { topologicalSort } from "./utils";
+import { createNodeKeyFromData } from "./node-keys";
 
 export type RecipeSelector = (
   availableRecipes: Recipe[],
@@ -56,12 +57,12 @@ const getOrThrow = <K, V>(map: Map<K, V>, key: K, type: string): V => {
 const calcRate = (amount: number, craftingTime: number): number =>
   (amount * 60) / craftingTime;
 
-// Helper: create node key
+// Use unified createNodeKeyFromData from node-keys.ts
 const createNodeKey = (
   itemId: ItemId,
   recipeId: RecipeId | null,
   isRaw: boolean,
-): string => (isRaw ? `raw_${itemId}` : `${itemId}_${recipeId}`);
+): string => createNodeKeyFromData(itemId, recipeId, isRaw);
 
 // Helper: generic tree traversal
 const traverseTree = (
@@ -681,11 +682,12 @@ function buildDependencyTree(
 }
 
 /** Processes raw dependency trees into merged plan */
-function processMergedPlan(rootNodes: ProductionNode[]): Omit<
-  UnifiedProductionPlan,
-  "dependencyRootNodes"
-> & {
+function processMergedPlan(rootNodes: ProductionNode[]): {
+  flatList: ProductionNode[];
+  totalPowerConsumption: number;
+  rawMaterialRequirements: Map<ItemId, number>;
   keyToLevel: Map<string, number>;
+  detectedCycles: DetectedCycle[];
 } {
   const producedItemIds = collectProducedItems(rootNodes);
   const mergedNodes = mergeProductionNodes(rootNodes, producedItemIds);
@@ -721,6 +723,7 @@ export function calculateProductionPlan(
     facilityMap: new Map(facilities.map((f) => [f.id, f])),
   };
 
+  // Step 1: Build dependency tree and detect cycles
   const { rootNodes: dependencyRootNodes, detectedCycles } =
     buildDependencyTree(
       targets,
@@ -730,6 +733,7 @@ export function calculateProductionPlan(
       manualRawMaterials,
     );
 
+  // Step 2: Process merged plan
   const {
     flatList,
     totalPowerConsumption,
