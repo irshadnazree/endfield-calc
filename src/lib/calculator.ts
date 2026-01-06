@@ -11,6 +11,7 @@ import type {
 } from "@/types";
 import { topologicalSort } from "./utils";
 import { createNodeKeyFromData } from "./node-keys";
+import { solveLinearSystem } from "./linear-solver";
 
 export type RecipeSelector = (
   availableRecipes: Recipe[],
@@ -388,64 +389,52 @@ function calculateCycleNetOutputs(
   return netOutputs;
 }
 
-/** Solves a 2-step cycle for steady-state operation */
-function solveCycleForOutput(
-  detectedCycle: DetectedCycle,
-  targetItemId: ItemId,
-  targetOutputRate: number,
-  maps: ProductionMaps,
-): Map<RecipeId, number> {
-  const solution = new Map<RecipeId, number>();
-  const { involvedItemIds: itemIds } = detectedCycle;
-  const recipeIds = detectedCycle.cycleNodes
-    .map((n) => n.recipe?.id)
-    .filter(Boolean) as RecipeId[];
+/** Solves an SCC using linear equations */
+function solveSCC(
+  involvedItemIds: ItemId[],
+  cycleNodes: ProductionNode[],
+  externalDemands: Map<ItemId, number>,
+): Map<RecipeId, number> | null {
+  const recipes = cycleNodes.map((n) => n.recipe).filter(Boolean) as Recipe[];
 
-  if (itemIds.length !== 2 || recipeIds.length !== 2) {
-    throw new Error(
-      `Complex cycles with ${itemIds.length} steps not yet supported`,
-    );
+  const n = involvedItemIds.length;
+  // We need n recipes to solve for n items
+  if (recipes.length !== n) return null;
+
+  const matrix: number[][] = [];
+  const constants: number[] = [];
+
+  for (let i = 0; i < n; i++) {
+    const itemId = involvedItemIds[i];
+    const row = new Array(n).fill(0);
+
+    for (let j = 0; j < n; j++) {
+      const recipe = recipes[j];
+      const output =
+        recipe.outputs.find((o) => o.itemId === itemId)?.amount || 0;
+      const input =
+        recipe.inputs.find((inpt) => inpt.itemId === itemId)?.amount || 0;
+
+      const outRate = (output * 60) / recipe.craftingTime;
+      const inRate = (input * 60) / recipe.craftingTime;
+      row[j] = outRate - inRate;
+    }
+
+    matrix.push(row);
+    constants.push(externalDemands.get(itemId) || 0);
   }
 
-  const [itemA, itemB] = itemIds;
-  const [recipeAId, recipeBId] = recipeIds;
-  const recipeA = getOrThrow(maps.recipeMap, recipeAId, "Recipe");
-  const recipeB = getOrThrow(maps.recipeMap, recipeBId, "Recipe");
+  const solution = solveLinearSystem(matrix, constants);
+  if (!solution) return null;
 
-  const recipeForA = recipeA.outputs.some((o) => o.itemId === itemA)
-    ? recipeA
-    : recipeB;
-  const recipeForB = recipeA.outputs.some((o) => o.itemId === itemB)
-    ? recipeA
-    : recipeB;
+  const recipeCounts = new Map<RecipeId, number>();
+  for (let i = 0; i < n; i++) {
+    // If any facility count is significantly negative, the cycle is unsustainable
+    if (solution[i] < -1e-9) return null;
+    recipeCounts.set(recipes[i].id, Math.max(0, solution[i]));
+  }
 
-  const outputA = recipeForA.outputs.find((o) => o.itemId === itemA)!;
-  const outputB = recipeForB.outputs.find((o) => o.itemId === itemB)!;
-  const rateA = calcRate(outputA.amount, recipeForA.craftingTime);
-  const rateB = calcRate(outputB.amount, recipeForB.craftingTime);
-
-  const inputAinB = recipeForB.inputs.find((i) => i.itemId === itemA);
-  const inputBinA = recipeForA.inputs.find((i) => i.itemId === itemB);
-  const consumeA = inputAinB
-    ? calcRate(inputAinB.amount, recipeForB.craftingTime)
-    : 0;
-  const consumeB = inputBinA
-    ? calcRate(inputBinA.amount, recipeForA.craftingTime)
-    : 0;
-
-  const netA = targetItemId === itemA ? targetOutputRate : 0;
-  const netB = targetItemId === itemB ? targetOutputRate : 0;
-
-  const coeffA = rateA - (consumeB * consumeA) / rateB;
-  const rhsA = netA + (netB * consumeA) / rateB;
-
-  const countA = rhsA / coeffA;
-  const countB = (countA * consumeB + netB) / rateB;
-
-  solution.set(recipeForA.id, countA);
-  solution.set(recipeForB.id, countB);
-
-  return solution;
+  return recipeCounts;
 }
 
 /** Builds dependency tree and detects cycles */
@@ -618,27 +607,31 @@ function buildDependencyTree(
 
     rootNodes.forEach((node) => findExternalConsumption(node));
 
+    // Add demand from targets if they are in the SCC
+    // This is necessary because findExternalConsumption starts from rootNodes (recipes),
+    // but the initial production target itself is not a recipe dependency.
+    targets.forEach((t) => {
+      if (cycleItemSet.has(t.itemId)) {
+        externalConsumption.set(
+          t.itemId,
+          (externalConsumption.get(t.itemId) || 0) + t.rate,
+        );
+      }
+    });
+
     if (externalConsumption.size === 0) return;
 
-    // Find primary extraction point
-    let extractionItemId: ItemId | null = null;
-    let maxConsumption = 0;
-    for (const [itemId, rate] of externalConsumption) {
-      if (rate > maxConsumption) {
-        maxConsumption = rate;
-        extractionItemId = itemId;
-      }
-    }
-
-    if (!extractionItemId) return;
-
     try {
-      const solution = solveCycleForOutput(
-        cycle,
-        extractionItemId,
-        maxConsumption,
-        maps,
+      const solution = solveSCC(
+        cycle.involvedItemIds,
+        cycle.cycleNodes,
+        externalConsumption,
       );
+
+      if (!solution) {
+        console.warn(`Cycle ${cycle.cycleId} has no valid solution`);
+        return;
+      }
 
       const updateCycleNodes = (node: ProductionNode) => {
         if (node.isCyclePlaceholder) {
