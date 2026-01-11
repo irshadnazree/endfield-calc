@@ -8,18 +8,20 @@
     <link rel="icon" type="image/svg+xml" href="/endfield-calc/logo.svg" />
 
     <!-- Primary Meta Tags -->
-    <title>Endfield Tool - Production Calculator for Arknights: Endfield</title>
+    <title>
+      Endfield Calc - Production Chain Calculator for Arknights: Endfield
+    </title>
     <meta
       name="title"
-      content="Endfield Tool - Production Calculator for Arknights: Endfield"
+      content="Endfield Calc - Production Chain Calculator for Arknights: Endfield"
     />
     <meta
       name="description"
-      content="Free production planning and facility calculation tool for Arknights: Endfield. Calculate resources, optimize factory production chains, and manage your AIC base efficiently. 明日方舟终末地工厂生产计算器。"
+      content="Numeric production chain calculator for Arknights: Endfield. Calculate recipes, resource throughput, and factory production ratios. No layout or simulation. 明日方舟：终末地 工厂数值计算器。"
     />
     <meta
       name="keywords"
-      content="Arknights Endfield, Endfield calculator, production planner, factory calculator, AIC base, recipe calculator, 明日方舟, 终末地, 工厂计算器, 生产规划"
+      content="Arknights Endfield, Endfield Calc, production calculator, production chain, factory calculator, recipe calculator, AIC base, 明日方舟, 终末地, 工厂计算器, 生产链计算"
     />
     <meta name="author" content="JamboChen" />
     <meta name="robots" content="index, follow" />
@@ -27,7 +29,7 @@
     <!-- Canonical URL -->
     <link rel="canonical" href="https://jambochen.github.io/endfield-calc/" />
 
-    <!-- Open Graph / Facebook -->
+    <!-- Open Graph -->
     <meta property="og:type" content="website" />
     <meta
       property="og:url"
@@ -35,19 +37,18 @@
     />
     <meta
       property="og:title"
-      content="Endfield Tool - Production Calculator for Arknights: Endfield"
+      content="Endfield Calc - Production Chain Calculator"
     />
     <meta
       property="og:description"
-      content="Free production planning and facility calculation tool for Arknights: Endfield. Calculate resources, optimize production chains, and manage your AIC base."
+      content="Numeric production chain calculator for Arknights: Endfield. Calculate recipes, resources, and factory throughput. No layout or simulation."
     />
     <meta
       property="og:image"
       content="https://jambochen.github.io/endfield-calc/og-image.png"
     />
-    <meta property="og:site_name" content="Endfield Tool" />
-    <meta property="og:locale" content="en_US" />
-    <meta property="og:locale:alternate" content="zh_CN" />
+    <meta property="og:site_name" content="Endfield Calc" />
+    <meta property="og:locale" content="en" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
@@ -57,32 +58,32 @@
     />
     <meta
       name="twitter:title"
-      content="Endfield Tool - Production Calculator"
+      content="Endfield Calc - Production Chain Calculator"
     />
     <meta
       name="twitter:description"
-      content="Free production planning tool for Arknights: Endfield. Calculate resources and optimize your factory."
+      content="Numeric production chain calculator for Arknights: Endfield."
     />
     <meta
       name="twitter:image"
       content="https://jambochen.github.io/endfield-calc/og-image.png"
     />
 
-    <!-- Additional SEO -->
+    <!-- Application -->
     <meta name="theme-color" content="#000000" />
-    <meta name="application-name" content="Endfield Tool" />
-    <meta name="apple-mobile-web-app-title" content="Endfield Tool" />
+    <meta name="application-name" content="Endfield Calc" />
+    <meta name="apple-mobile-web-app-title" content="Endfield Calc" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
 
-    <!-- Structured Data (JSON-LD) -->
+    <!-- Structured Data -->
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "WebApplication",
-        "name": "Endfield Tool",
-        "alternateName": "Arknights Endfield Production Calculator",
-        "description": "Production planning and facility calculation tool for Arknights: Endfield. Helps players optimize resource production and manage factory construction.",
+        "name": "Endfield Calc",
+        "alternateName": "Arknights Endfield Production Chain Calculator",
+        "description": "Numeric-only production chain calculator for Arknights: Endfield. Calculates recipes, resource throughput, and factory production ratios. Does not provide layout or simulation.",
         "url": "https://jambochen.github.io/endfield-calc/",
         "applicationCategory": "GameApplication",
         "operatingSystem": "Web Browser",
@@ -97,28 +98,24 @@
           "name": "JamboChen",
           "url": "https://github.com/JamboChen"
         },
-        "inLanguage": ["en", "zh"],
+        "inLanguage": ["en", "es", "ja", "ko", "ru", "zh-Hans", "zh-Hant"],
         "featureList": [
           "Production chain calculation",
-          "Facility planning",
-          "Resource optimization",
-          "Recipe management",
-          "Multi-language support"
-        ],
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": "5",
-          "ratingCount": "1"
-        }
+          "Recipe and rate calculation",
+          "Resource throughput analysis",
+          "Factory ratio estimation",
+          "Multi-language support via i18next"
+        ]
       }
     </script>
 
-    <!-- Preload critical resources -->
+    <!-- Preconnect -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   </head>
+
   <body>
-    <!-- NoScript fallback for SEO -->
+    <!-- NoScript fallback -->
     <noscript>
       <div
         style="
@@ -127,26 +124,21 @@
           font-family: system-ui, sans-serif;
         "
       >
-        <h1>Endfield Tool - Production Calculator</h1>
+        <h1>Endfield Calc</h1>
         <p>
-          A production planning and facility calculation tool for
+          A numeric production chain calculator for
           <strong>Arknights: Endfield</strong>.
         </p>
         <h2>Features</h2>
         <ul style="text-align: left; max-width: 600px; margin: 20px auto">
-          <li>📊 View all items and recipes with production times</li>
-          <li>
-            🎯 Set production targets and automatically calculate material
-            requirements
-          </li>
-          <li>🏭 Estimate required facilities and recommended counts</li>
-          <li>⚡ Real-time calculation with instant updates</li>
-          <li>🌍 Multi-language support (English, 中文)</li>
+          <li>View items and recipes with production rates</li>
+          <li>Calculate resource requirements for target outputs</li>
+          <li>Analyze factory production ratios</li>
+          <li>Instant numeric recalculation</li>
+          <li>Multi-language support</li>
         </ul>
-        <p>
-          <strong>This application requires JavaScript to run.</strong>
-        </p>
-        <p>Please enable JavaScript in your browser to use the tool.</p>
+
+        <p><strong>This application requires JavaScript.</strong></p>
       </div>
     </noscript>
 
