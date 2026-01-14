@@ -228,6 +228,14 @@ export function applyEdgeStyling(edges: Edge[], nodes: Node[]): Edge[] {
     // Calculate color based on normalized flow rate
     const strokeColor = getFlowRateColor(normalizedRate);
 
+    // Calculate animation speed based on flow rate
+    // Higher rate = faster animation (shorter duration)
+    // Range: 0.5s (fast) to 10s (slow)
+    const minDuration = 0.5;
+    const maxDuration = 10;
+    const animationDuration =
+      maxDuration - (maxDuration - minDuration) * normalizedRate;
+
     // Detect backward edge based on actual node positions
     // If source X > target X, it's a backward edge (goes right to left)
     const sourcePos = nodePositions.get(edge.source);
@@ -237,14 +245,18 @@ export function applyEdgeStyling(edges: Edge[], nodes: Node[]): Edge[] {
     return {
       ...edge,
       type: isBackward ? "backwardEdge" : "simplebezier",
+      animated: true,
       style: {
         strokeWidth,
         stroke: strokeColor,
         strokeLinecap: "round" as const,
+        animationDuration: `${animationDuration.toFixed(2)}s`,
       },
       markerEnd: {
         type: MarkerType.ArrowClosed,
         color: strokeColor,
+        width: 20,
+        height: 20,
       },
       labelBgPadding: [8, 4] as [number, number],
       labelBgBorderRadius: 4,
