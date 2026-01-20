@@ -1,4 +1,3 @@
-import { Position } from "@xyflow/react";
 import type { Node, Edge } from "@xyflow/react";
 import type {
   Item,
@@ -13,6 +12,8 @@ import {
   aggregateProductionNodes,
   findTargetsWithDownstream,
   createEdge,
+  createProductionFlowNode,
+  createTargetSinkNode,
 } from "../flow/flow-utils";
 import {
   createFlowNodeId,
@@ -96,26 +97,24 @@ export function mapPlanToFlowMerged(
       const aggregatedData = aggregatedNodes.get(key)!;
       const isDirectTarget = node.isTarget && targetsWithDownstream.has(key);
 
-      nodes.push({
-        id: nodeId,
-        type: "productionNode",
-        data: {
-          productionNode: {
+      nodes.push(
+        createProductionFlowNode(
+          nodeId,
+          {
             ...aggregatedData.node,
             targetRate: aggregatedData.totalRate,
             facilityCount: aggregatedData.totalFacilityCount,
           },
           items,
           facilities,
-          isDirectTarget,
-          directTargetRate: isDirectTarget
-            ? aggregatedData.totalRate
-            : undefined,
-        },
-        position: { x: 0, y: 0 },
-        sourcePosition: Position.Right,
-        targetPosition: Position.Left,
-      });
+          {
+            isDirectTarget,
+            directTargetRate: isDirectTarget
+              ? aggregatedData.totalRate
+              : undefined,
+          },
+        ),
+      );
     }
 
     // Create edge to parent
@@ -150,25 +149,22 @@ export function mapPlanToFlowMerged(
     const targetNodeId = createTargetSinkId(data.node.item.id);
     const hasDownstream = targetsWithDownstream.has(key);
 
-    targetSinkNodes.push({
-      id: targetNodeId,
-      type: "targetSink",
-      data: {
-        item: data.node.item,
-        targetRate: data.totalRate,
+    targetSinkNodes.push(
+      createTargetSinkNode(
+        targetNodeId,
+        data.node.item,
+        data.totalRate,
         items,
         facilities,
-        productionInfo: !hasDownstream
+        !hasDownstream
           ? {
               facility: data.node.facility,
               facilityCount: data.totalFacilityCount,
               recipe: data.node.recipe,
             }
           : undefined,
-      },
-      position: { x: 0, y: 0 },
-      targetPosition: Position.Left,
-    });
+      ),
+    );
 
     if (hasDownstream) {
       const nodeId = createFlowNodeId(key);

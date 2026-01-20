@@ -1,4 +1,3 @@
-import { Position } from "@xyflow/react";
 import type { Edge } from "@xyflow/react";
 import type {
   Item,
@@ -14,6 +13,8 @@ import {
   aggregateProductionNodes,
   type AggregatedProductionNodeData,
   createEdge,
+  createProductionFlowNode,
+  createTargetSinkNode,
 } from "../flow/flow-utils";
 import { createFlowNodeId, createTargetSinkId } from "@/lib/node-keys";
 import { calculateDemandRate } from "@/lib/utils";
@@ -74,39 +75,6 @@ function findProductionKeyForItem(
     }
   }
   return null;
-}
-
-/**
- * Helper: Creates production flow node
- */
-function createProductionFlowNode(
-  nodeId: string,
-  node: ProductionNode,
-  items: Item[],
-  facilities: Facility[],
-  facilityIndex?: number,
-  totalFacilities?: number,
-  isPartialLoad?: boolean,
-  isDirectTarget?: boolean,
-  directTargetRate?: number,
-): FlowProductionNode {
-  return {
-    id: nodeId,
-    type: "productionNode",
-    data: {
-      productionNode: node,
-      items,
-      facilities,
-      facilityIndex,
-      totalFacilities,
-      isPartialLoad,
-      isDirectTarget,
-      directTargetRate,
-    },
-    position: { x: 0, y: 0 },
-    sourcePosition: Position.Right,
-    targetPosition: Position.Left,
-  };
 }
 
 /**
@@ -179,11 +147,9 @@ export function mapPlanToFlowSeparated(
             },
             items,
             facilities,
-            undefined,
-            undefined,
-            undefined,
-            false,
-            undefined,
+            {
+              isDirectTarget: false,
+            },
           ),
         );
       }
@@ -261,11 +227,12 @@ export function mapPlanToFlowSeparated(
               },
               items,
               facilities,
-              facilityInstance.facilityIndex,
-              totalFacilities,
-              isPartialLoad,
-              false,
-              undefined,
+              {
+                facilityIndex: facilityInstance.facilityIndex,
+                totalFacilities: totalFacilities,
+                isPartialLoad: isPartialLoad,
+                isDirectTarget: false,
+              },
             ),
           );
 
@@ -304,17 +271,10 @@ export function mapPlanToFlowSeparated(
       rawMaterialNodes.set(rootNode.item.id, rawNodeId);
 
       flowNodes.push(
-        createProductionFlowNode(
-          rawNodeId,
-          rootNode,
-          items,
-          facilities,
-          undefined,
-          undefined,
-          undefined,
-          rootNode.isTarget,
-          rootNode.isTarget ? rootNode.targetRate : undefined,
-        ),
+        createProductionFlowNode(rawNodeId, rootNode, items, facilities, {
+          isDirectTarget: rootNode.isTarget,
+          directTargetRate: rootNode.isTarget ? rootNode.targetRate : undefined,
+        }),
       );
     } else {
       // Create production facilities and allocate their dependencies
@@ -338,11 +298,12 @@ export function mapPlanToFlowSeparated(
             },
             items,
             facilities,
-            facilityInstance.facilityIndex,
-            facilityInstances.length,
-            isPartialLoad,
-            false, // isDirectTarget is always false here since targets are skipped
-            undefined,
+            {
+              facilityIndex: facilityInstance.facilityIndex,
+              totalFacilities: facilityInstances.length,
+              isPartialLoad: isPartialLoad,
+              isDirectTarget: false,
+            },
           ),
         );
 
@@ -383,26 +344,25 @@ export function mapPlanToFlowSeparated(
       hasFacility: !!data.node.facility,
     });
 
-    targetSinkNodes.push({
-      id: targetSinkId,
-      type: "targetSink",
-      data: {
-        item: data.node.item,
-        targetRate: data.totalRate,
+    // Non-raw-material targets always show production info in separated mode
+    const productionInfo = !isRawMaterialTarget
+      ? {
+          facility: data.node.facility,
+          facilityCount: data.totalFacilityCount,
+          recipe: data.node.recipe,
+        }
+      : undefined;
+
+    targetSinkNodes.push(
+      createTargetSinkNode(
+        targetSinkId,
+        data.node.item,
+        data.totalRate,
         items,
         facilities,
-        // Non-raw-material targets always show production info in separated mode
-        productionInfo: !isRawMaterialTarget
-          ? {
-              facility: data.node.facility,
-              facilityCount: data.totalFacilityCount,
-              recipe: data.node.recipe,
-            }
-          : undefined,
-      },
-      position: { x: 0, y: 0 },
-      targetPosition: Position.Left,
-    });
+        productionInfo,
+      ),
+    );
 
     if (!isRawMaterialTarget) {
       // Non-raw-material targets: connect dependencies directly to target sink

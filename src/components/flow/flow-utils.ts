@@ -1,5 +1,5 @@
-import type { EdgeDirection, ItemId, ProductionNode } from "@/types";
-import { MarkerType, type Edge, type Node } from "@xyflow/react";
+import type { EdgeDirection, ItemId, ProductionNode, Item, Facility, FlowProductionNode, FlowTargetNode } from "@/types";
+import { MarkerType, type Edge, type Node, Position } from "@xyflow/react";
 import { createNodeKey } from "@/lib/node-keys";
 
 export const createFlowNodeKey = createNodeKey;
@@ -307,4 +307,77 @@ function getFlowRateColor(normalizedRate: number): string {
     // Interpolate between green and red
     return interpolateColor(green, red, (normalizedRate - 0.5) * 2);
   }
+}
+
+/**
+ * Helper: Creates production flow node.
+ * Shared between separated and merged mappers to ensure visual consistency.
+ */
+export function createProductionFlowNode(
+  nodeId: string,
+  node: ProductionNode,
+  items: Item[],
+  facilities: Facility[],
+  options: {
+    facilityIndex?: number;
+    totalFacilities?: number;
+    isPartialLoad?: boolean;
+    isDirectTarget?: boolean;
+    directTargetRate?: number;
+  } = {},
+): FlowProductionNode {
+  return {
+    id: nodeId,
+    type: "productionNode",
+    data: {
+      productionNode: node,
+      items,
+      facilities,
+      facilityIndex: options.facilityIndex,
+      totalFacilities: options.totalFacilities,
+      isPartialLoad: options.isPartialLoad,
+      isDirectTarget: options.isDirectTarget,
+      directTargetRate: options.directTargetRate,
+    },
+    position: { x: 0, y: 0 },
+    sourcePosition: Position.Right,
+    targetPosition: Position.Left,
+  };
+}
+
+/**
+ * Helper: Creates target sink node.
+ * Shared between separated and merged mappers.
+ */
+export function createTargetSinkNode(
+  nodeId: string,
+  item: Item,
+  targetRate: number,
+  items: Item[],
+  facilities: Facility[],
+  productionInfo?: {
+    facility?: Facility | null;
+    facilityCount: number;
+    recipe?: ProductionNode["recipe"];
+  },
+): FlowTargetNode {
+  return {
+    id: nodeId,
+    type: "targetSink",
+    data: {
+      item,
+      targetRate,
+      items,
+      facilities,
+      productionInfo: productionInfo
+        ? {
+          facility: productionInfo.facility ?? null,
+          facilityCount: productionInfo.facilityCount,
+          recipe: productionInfo.recipe ?? null,
+        }
+        : undefined,
+    },
+    position: { x: 0, y: 0 },
+    targetPosition: Position.Left,
+  };
 }
