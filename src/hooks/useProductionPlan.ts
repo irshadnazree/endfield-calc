@@ -1,7 +1,4 @@
-import {
-  calculateProductionPlan,
-  smartRecipeSelector,
-} from "../lib/calculator";
+import { calculateProductionPlan } from "@/lib/calculator";
 import { items, recipes, facilities } from "@/data";
 import { useState, useMemo, useCallback } from "react";
 import type { ProductionTarget } from "@/components/panels/TargetItemsGrid";
@@ -36,7 +33,6 @@ export function useProductionPlan() {
           recipes,
           facilities,
           recipeOverrides,
-          smartRecipeSelector,
           manualRawMaterials,
         );
       }

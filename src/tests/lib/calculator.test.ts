@@ -1,9 +1,5 @@
 import { describe, test, expect } from "vitest";
-import {
-  calculateProductionPlan,
-  defaultRecipeSelector,
-  smartRecipeSelector,
-} from "@/lib/calculator";
+import { calculateProductionPlan } from "@/lib/calculator";
 import type {
   ProductionDependencyGraph,
   ProductionGraphNode,
@@ -54,61 +50,6 @@ const getRecipeInputs = (
     .filter((e) => e.to === recipeId)
     .map((e) => e.from as ItemId);
 };
-
-describe("Recipe Selectors", () => {
-  test("defaultRecipeSelector returns first recipe", () => {
-    const recipes = multiRecipeItems.filter(
-      (r) => r.outputs[0].itemId === ItemId.ITEM_IRON_NUGGET,
-    );
-
-    const selected = defaultRecipeSelector(recipes);
-
-    expect(selected.id).toBe(RecipeId.FURNANCE_IRON_NUGGET_1);
-  });
-
-  test("smartRecipeSelector avoids circular dependencies", () => {
-    const recipes: Recipe[] = [
-      {
-        id: RecipeId.FURNANCE_IRON_NUGGET_2,
-        inputs: [{ itemId: ItemId.ITEM_IRON_POWDER, amount: 1 }],
-        outputs: [{ itemId: ItemId.ITEM_IRON_NUGGET, amount: 1 }],
-        facilityId: mockFacilities[0].id,
-        craftingTime: 2,
-      },
-      {
-        id: RecipeId.FURNANCE_IRON_NUGGET_1,
-        inputs: [{ itemId: ItemId.ITEM_IRON_ORE, amount: 1 }],
-        outputs: [{ itemId: ItemId.ITEM_IRON_NUGGET, amount: 1 }],
-        facilityId: mockFacilities[0].id,
-        craftingTime: 2,
-      },
-    ];
-
-    const visitedPath = new Set([ItemId.ITEM_IRON_POWDER]);
-
-    const selected = smartRecipeSelector(recipes, visitedPath);
-
-    expect(selected.id).toBe(RecipeId.FURNANCE_IRON_NUGGET_1);
-  });
-
-  test("smartRecipeSelector falls back to first recipe if all create cycles", () => {
-    const recipes: Recipe[] = [
-      {
-        id: RecipeId.FURNANCE_IRON_NUGGET_2,
-        inputs: [{ itemId: ItemId.ITEM_IRON_POWDER, amount: 1 }],
-        outputs: [{ itemId: ItemId.ITEM_IRON_NUGGET, amount: 1 }],
-        facilityId: mockFacilities[0].id,
-        craftingTime: 2,
-      },
-    ];
-
-    const visitedPath = new Set([ItemId.ITEM_IRON_POWDER]);
-
-    const selected = smartRecipeSelector(recipes, visitedPath);
-
-    expect(selected.id).toBe(RecipeId.FURNANCE_IRON_NUGGET_2);
-  });
-});
 
 describe("Simple Production Plan", () => {
   test("calculates plan for single raw material", () => {
@@ -204,7 +145,6 @@ describe("Multiple Recipe Selection", () => {
       multiRecipeItems,
       mockFacilities,
       undefined,
-      defaultRecipeSelector,
     );
 
     const producer = getProducer(plan, ItemId.ITEM_IRON_NUGGET);
@@ -347,7 +287,6 @@ describe("Manual Raw Materials", () => {
       simpleRecipes,
       mockFacilities,
       undefined,
-      defaultRecipeSelector,
       manualRaw,
     );
 
@@ -365,7 +304,6 @@ describe("Manual Raw Materials", () => {
       complexRecipes,
       mockFacilities,
       undefined,
-      defaultRecipeSelector,
       manualRaw,
     );
 

@@ -14,21 +14,39 @@ import { solveLinearSystem } from "./linear-solver";
 import { forcedRawMaterials } from "@/data";
 import { calcRate } from "@/lib/utils";
 
-export type RecipeSelector = (
-  availableRecipes: Recipe[],
-  visitedPath?: Set<ItemId>,
-) => Recipe;
+const selectRecipe = (recipes: Recipe[], visitedPath: Set<ItemId>): Recipe => {
+  // Priority 1: Recipes with single output (no byproducts)
+  const singleOutput = recipes.filter((r) => r.outputs.length === 1);
 
-export const defaultRecipeSelector: RecipeSelector = (recipes) => recipes[0];
+  if (singleOutput.length > 0) {
+    // Priority 2: Among single-output recipes, prefer non-circular ones
+    if (visitedPath.size > 0) {
+      const nonCircular = singleOutput.filter(
+        (r) => !r.inputs.some((input) => visitedPath.has(input.itemId)),
+      );
 
-export const smartRecipeSelector: RecipeSelector = (recipes, visitedPath) => {
-  if (!visitedPath?.size) return defaultRecipeSelector(recipes);
+      if (nonCircular.length > 0) {
+        return nonCircular[0];
+      }
+    }
 
-  const nonCircular = recipes.filter(
-    (r) => !r.inputs.some((input) => visitedPath.has(input.itemId)),
-  );
+    // Priority 3: Return first single-output recipe
+    return singleOutput[0];
+  }
 
-  return nonCircular.length > 0 ? nonCircular[0] : recipes[0];
+  // Priority 4: If no single-output recipes, prefer non-circular
+  if (visitedPath.size > 0) {
+    const nonCircular = recipes.filter(
+      (r) => !r.inputs.some((input) => visitedPath.has(input.itemId)),
+    );
+
+    if (nonCircular.length > 0) {
+      return nonCircular[0];
+    }
+  }
+
+  // Priority 5: Default to first available recipe
+  return recipes[0];
 };
 
 type ProductionMaps = {
@@ -89,7 +107,6 @@ function buildBipartiteGraph(
   targets: Array<{ itemId: ItemId; rate: number }>,
   maps: ProductionMaps,
   recipeOverrides?: Map<ItemId, RecipeId>,
-  recipeSelector: RecipeSelector = defaultRecipeSelector,
   manualRawMaterials?: Set<ItemId>,
 ): BipartiteGraph {
   const graph: BipartiteGraph = {
@@ -105,7 +122,7 @@ function buildBipartiteGraph(
 
   const visitedItems = new Set<ItemId>();
 
-  function traverse(itemId: ItemId) {
+  function traverse(itemId: ItemId, visitedPath: Set<ItemId>) {
     if (visitedItems.has(itemId)) return;
     visitedItems.add(itemId);
 
@@ -142,7 +159,7 @@ function buildBipartiteGraph(
           recipeOverrides.get(itemId)!,
           "Override recipe",
         )
-      : recipeSelector(availableRecipes, new Set([itemId]));
+      : selectRecipe(availableRecipes, visitedPath);
 
     const facility = getOrThrow(
       maps.facilityMap,
@@ -168,6 +185,9 @@ function buildBipartiteGraph(
 
     graph.itemProducedBy.set(itemId, selectedRecipe.id);
 
+    const newVisitedPath = new Set(visitedPath);
+    newVisitedPath.add(itemId);
+
     selectedRecipe.inputs.forEach((input) => {
       graph.recipeInputs.get(selectedRecipe.id)!.add(input.itemId);
 
@@ -176,11 +196,11 @@ function buildBipartiteGraph(
       }
       graph.itemConsumedBy.get(input.itemId)!.add(selectedRecipe.id);
 
-      traverse(input.itemId);
+      traverse(input.itemId, newVisitedPath);
     });
   }
 
-  targets.forEach(({ itemId }) => traverse(itemId));
+  targets.forEach(({ itemId }) => traverse(itemId, new Set()));
 
   return graph;
 }
@@ -261,12 +281,23 @@ function detectSCCs(graph: BipartiteGraph): SCCInfo[] {
           });
         });
 
-        sccs.push({
+        const sccInfo: SCCInfo = {
           id: `scc-${Array.from(sccItems).sort().join("-")}`,
           items: sccItems,
           recipes: sccRecipes,
           externalInputs,
-        });
+        };
+
+        // LOG: SCC detected
+        console.log(`[SCC] Detected cycle: ${sccInfo.id}`);
+        console.log(`  Items (${sccItems.size}):`, Array.from(sccItems));
+        console.log(`  Recipes (${sccRecipes.size}):`, Array.from(sccRecipes));
+        console.log(
+          `  External inputs (${externalInputs.size}):`,
+          Array.from(externalInputs),
+        );
+
+        sccs.push(sccInfo);
       }
     }
   }
@@ -277,6 +308,7 @@ function detectSCCs(graph: BipartiteGraph): SCCInfo[] {
     }
   });
 
+  console.log(`[SCC] Total SCCs detected: ${sccs.length}`);
   return sccs;
 }
 
@@ -383,10 +415,16 @@ function calculateFlows(
 
   const reversedOrder = condensedOrder.reverse();
 
-  reversedOrder.forEach((node) => {
+  console.log(
+    `[FLOW] Processing ${reversedOrder.length} condensed nodes in topological order`,
+  );
+
+  reversedOrder.forEach((node, idx) => {
     if (node.type === "scc") {
+      console.log(`[FLOW] [${idx}] Processing SCC: ${node.scc.id}`);
       solveSCCFlow(node.scc, graph, itemDemands, recipeFacilityCounts, maps);
     } else if (node.type === "recipe") {
+      console.log(`[FLOW] [${idx}] Processing recipe: ${node.recipeId}`);
       const recipeData = graph.recipeNodes.get(node.recipeId)!;
       const recipe = recipeData.recipe;
 
@@ -406,6 +444,7 @@ function calculateFlows(
       });
 
       recipeFacilityCounts.set(node.recipeId, facilityCount);
+      console.log(`  Facility count: ${facilityCount.toFixed(4)}`);
 
       recipe.inputs.forEach((input) => {
         const inputDemand =
@@ -415,6 +454,8 @@ function calculateFlows(
           (itemDemands.get(input.itemId) || 0) + inputDemand,
         );
       });
+    } else if (node.type === "item") {
+      console.log(`[FLOW] [${idx}] Processing item: ${node.itemId}`);
     }
   });
 
@@ -428,11 +469,15 @@ function solveSCCFlow(
   recipeFacilityCounts: Map<RecipeId, number>,
   maps: ProductionMaps,
 ) {
+  console.log(`[SCC_SOLVE] Solving flow for SCC: ${scc.id}`);
+
   const externalDemands = new Map<ItemId, number>();
 
+  // Calculate external demands for each item in the SCC
   scc.items.forEach((itemId) => {
     let demand = 0;
 
+    // Demand from recipes outside the SCC
     const consumers = graph.itemConsumedBy.get(itemId);
     if (consumers) {
       consumers.forEach((recipeId) => {
@@ -441,15 +486,24 @@ function solveSCCFlow(
           const recipe = maps.recipeMap.get(recipeId)!;
           const input = recipe.inputs.find((i) => i.itemId === itemId);
           if (input) {
-            demand +=
+            const consumption =
               calcRate(input.amount, recipe.craftingTime) * facilityCount;
+            demand += consumption;
+            console.log(
+              `    Item ${itemId} consumed by external recipe ${recipeId}: ${consumption.toFixed(4)}`,
+            );
           }
         }
       });
     }
 
+    // Demand from target items
     if (graph.targets.has(itemId)) {
-      demand += itemDemands.get(itemId) || 0;
+      const targetDemand = itemDemands.get(itemId) || 0;
+      demand += targetDemand;
+      console.log(
+        `    Item ${itemId} is target with demand: ${targetDemand.toFixed(4)}`,
+      );
     }
 
     if (demand > 0) {
@@ -457,7 +511,18 @@ function solveSCCFlow(
     }
   });
 
-  if (externalDemands.size === 0) return;
+  console.log(`  External demands count: ${externalDemands.size}`);
+  externalDemands.forEach((demand, itemId) => {
+    console.log(`    ${itemId}: ${demand.toFixed(4)}/min`);
+  });
+
+  // Early exit if no external demand
+  if (externalDemands.size === 0) {
+    console.log(
+      `  [SCC_SOLVE] No external demand, skipping this SCC (bad cycle)`,
+    );
+    return;
+  }
 
   const itemsList = Array.from(scc.items);
   const recipesList = Array.from(scc.recipes).map(
@@ -467,11 +532,17 @@ function solveSCCFlow(
   const n = itemsList.length;
   const m = recipesList.length;
 
-  if (m === 0 || n === 0) return;
+  console.log(`  Building linear system: ${n} items × ${m} recipes`);
+
+  if (m === 0 || n === 0) {
+    console.log(`  [SCC_SOLVE] Empty system, skipping`);
+    return;
+  }
 
   const matrix: number[][] = [];
   const constants: number[] = [];
 
+  // Build linear equation system
   for (let i = 0; i < n; i++) {
     const itemId = itemsList[i];
     const row = new Array(m).fill(0);
@@ -490,20 +561,34 @@ function solveSCCFlow(
 
     matrix.push(row);
     constants.push(externalDemands.get(itemId) || 0);
+
+    console.log(
+      `    Equation ${i} (${itemId}):`,
+      row.map((v, j) => `${v.toFixed(2)}*r${j}`).join(" + "),
+      `= ${constants[i].toFixed(4)}`,
+    );
   }
 
+  // Solve the system
   const solution = solveLinearSystem(matrix, constants);
 
   if (!solution) {
-    console.warn(`Cannot solve SCC ${scc.id}`);
+    console.warn(
+      `  [SCC_SOLVE] Cannot solve SCC ${scc.id} - system has no solution`,
+    );
     return;
   }
 
+  console.log(`  Solution found:`);
   for (let j = 0; j < m; j++) {
     const facilityCount = Math.max(0, solution[j]);
     recipeFacilityCounts.set(recipesList[j].id, facilityCount);
+    console.log(
+      `    Recipe ${recipesList[j].id}: ${facilityCount.toFixed(4)} facilities`,
+    );
   }
 
+  // Propagate demands to external inputs
   scc.externalInputs.forEach((inputItemId) => {
     let totalConsumption = 0;
 
@@ -513,8 +598,9 @@ function solveSCCFlow(
       const input = recipe.inputs.find((i) => i.itemId === inputItemId);
 
       if (input) {
-        totalConsumption +=
+        const consumption =
           calcRate(input.amount, recipe.craftingTime) * facilityCount;
+        totalConsumption += consumption;
       }
     });
 
@@ -522,6 +608,9 @@ function solveSCCFlow(
       itemDemands.set(
         inputItemId,
         (itemDemands.get(inputItemId) || 0) + totalConsumption,
+      );
+      console.log(
+        `  External input ${inputItemId} demand increased by: ${totalConsumption.toFixed(4)}/min`,
       );
     }
   });
@@ -633,7 +722,6 @@ export function calculateProductionPlan(
   recipes: Recipe[],
   facilities: Facility[],
   recipeOverrides?: Map<ItemId, RecipeId>,
-  recipeSelector: RecipeSelector = defaultRecipeSelector,
   manualRawMaterials?: Set<ItemId>,
 ): ProductionDependencyGraph {
   if (targets.length === 0) throw new Error("No targets specified");
@@ -648,7 +736,6 @@ export function calculateProductionPlan(
     targets,
     maps,
     recipeOverrides,
-    recipeSelector,
     manualRawMaterials,
   );
 
