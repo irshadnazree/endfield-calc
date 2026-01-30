@@ -39,6 +39,7 @@
     "target": "Цель",
     "targetDescription": "Производить {{rate}} {{item}} в минуту.",
     "targetRate": "Целевая скорость",
+    "pickupPoint": "Точка выдачи",
     "trueRawMaterial": "Настоящее сырье"
   }
 }

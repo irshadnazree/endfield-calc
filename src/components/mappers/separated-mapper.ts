@@ -14,8 +14,8 @@ import {
   createProductionFlowNode,
   createTargetSinkNode,
 } from "../flow/flow-utils";
-import { createTargetSinkId, createRawMaterialId } from "@/lib/node-keys";
-import { calcRate } from "@/lib/utils";
+import { createTargetSinkId, createPickupPointId } from "@/lib/node-keys";
+import { calcRate, getPickupPointCount, TRANSPORT_BELT_CAPACITY } from "@/lib/utils";
 
 /**
  * Maps ProductionDependencyGraph to React Flow nodes and edges in separated mode.
@@ -27,7 +27,10 @@ export function mapPlanToFlowSeparated(
   facilities: Facility[],
 ): { nodes: (FlowProductionNode | FlowTargetNode)[]; edges: Edge[] } {
   const poolManager = new CapacityPoolManager();
-  const rawMaterialNodes = new Map<ItemId, string>();
+  const rawMaterialPickupPoints = new Map<
+    ItemId,
+    { nodeId: string; remainingCapacity: number }[]
+  >();
   const flowNodes: FlowProductionNode[] = [];
   const targetSinkNodes: FlowTargetNode[] = [];
   const edges: Edge[] = [];
@@ -61,23 +64,32 @@ export function mapPlanToFlowSeparated(
     }
   });
 
-  function ensureRawMaterialNode(
+  function ensurePickupPointNodes(
     itemId: ItemId,
     item: Item,
     totalDemand: number,
-  ): string {
-    let rawNodeId = rawMaterialNodes.get(itemId);
+  ): void {
+    if (rawMaterialPickupPoints.has(itemId)) return;
 
-    if (!rawNodeId) {
-      rawNodeId = createRawMaterialId(itemId);
-      rawMaterialNodes.set(itemId, rawNodeId);
+    const count = getPickupPointCount(totalDemand);
+    const pickupPoints: { nodeId: string; remainingCapacity: number }[] = [];
+
+    for (let i = 0; i < count; i++) {
+      const nodeId = createPickupPointId(itemId, i);
+      const capacity = Math.min(
+        TRANSPORT_BELT_CAPACITY,
+        totalDemand - i * TRANSPORT_BELT_CAPACITY,
+      );
+      const isPartialLoad = capacity < TRANSPORT_BELT_CAPACITY * 0.999;
+
+      pickupPoints.push({ nodeId, remainingCapacity: capacity });
 
       flowNodes.push(
         createProductionFlowNode(
-          rawNodeId,
+          nodeId,
           {
             item,
-            targetRate: totalDemand,
+            targetRate: capacity,
             recipe: null,
             facility: null,
             facilityCount: 0,
@@ -87,12 +99,41 @@ export function mapPlanToFlowSeparated(
           },
           items,
           facilities,
-          { isDirectTarget: false },
+          {
+            facilityIndex: i,
+            totalFacilities: count,
+            isPartialLoad,
+            isDirectTarget: false,
+          },
         ),
       );
     }
 
-    return rawNodeId;
+    rawMaterialPickupPoints.set(itemId, pickupPoints);
+  }
+
+  function allocateFromPickupPoints(
+    itemId: ItemId,
+    demandRate: number,
+    consumerFacilityId: string,
+  ): void {
+    const pickupPoints = rawMaterialPickupPoints.get(itemId);
+    if (!pickupPoints) return;
+
+    let remainingDemand = demandRate;
+
+    for (const pp of pickupPoints) {
+      if (remainingDemand <= 0) break;
+      if (pp.remainingCapacity <= 0) continue;
+
+      const allocated = Math.min(pp.remainingCapacity, remainingDemand);
+      pp.remainingCapacity -= allocated;
+      remainingDemand -= allocated;
+
+      edges.push(
+        createEdge(`e${edgeIdCounter++}`, pp.nodeId, consumerFacilityId, allocated),
+      );
+    }
   }
 
   function allocateUpstream(
@@ -111,21 +152,9 @@ export function mapPlanToFlowSeparated(
     )?.from;
 
     if (!producerRecipeId) {
-      // Raw material
-      const rawNodeId = ensureRawMaterialNode(
-        itemId,
-        itemNode.item,
-        itemNode.productionRate,
-      );
-
-      edges.push(
-        createEdge(
-          `e${edgeIdCounter++}`,
-          rawNodeId,
-          consumerFacilityId,
-          demandRate,
-        ),
-      );
+      // Raw material — create pickup point nodes and allocate
+      ensurePickupPointNodes(itemId, itemNode.item, itemNode.productionRate);
+      allocateFromPickupPoints(itemId, demandRate, consumerFacilityId);
       return;
     }
 

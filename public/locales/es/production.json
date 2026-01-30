@@ -39,6 +39,7 @@
     "target": "Objetivo",
     "targetDescription": "Producir {{rate}} {{item}} por minuto.",
     "targetRate": "Tasa objetivo",
+    "pickupPoint": "Punto de recogida",
     "trueRawMaterial": "Materia prima verdadera"
   }
 }

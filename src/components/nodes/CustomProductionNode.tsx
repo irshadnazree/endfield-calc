@@ -1,6 +1,6 @@
 import { Handle, type NodeProps, type Node, Position } from "@xyflow/react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Factory, Zap, Star } from "lucide-react";
+import { Factory, Zap, Star, ArrowDownToLine } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -15,6 +15,7 @@ import type {
   FlowNodeDataSeparatedWithTarget,
   FlowNodeDataWithTarget,
 } from "@/types";
+import { getPickupPointCount } from "@/lib/utils";
 
 /**
  * Type alias for a React Flow node containing production data.
@@ -110,6 +111,11 @@ export default function CustomProductionNode({
       {node.isRawMaterial ? (
         <div>
           <p className="text-muted-foreground">{t("tree.trueRawMaterial")}</p>
+          <div className="mt-1 text-muted-foreground">
+            {t("tree.pickupPoint")}: {isSeparated
+              ? `${data.facilityIndex! + 1} / ${data.totalFacilities}`
+              : `×${getPickupPointCount(node.targetRate)}`}
+          </div>
         </div>
       ) : node.recipe ? (
         <>
@@ -225,6 +231,22 @@ export default function CustomProductionNode({
                   {isSeparated
                     ? `${data.facilityIndex! + 1}/${data.totalFacilities}`
                     : `×${formatNumber(node.facilityCount, 1)}`}
+                </span>
+              </div>
+            )}
+            {/* Pickup point info bar (raw materials only) */}
+            {node.isRawMaterial && (
+              <div className="flex items-center justify-between bg-green-100/50 dark:bg-green-900/30 border border-green-200/50 dark:border-green-800/50 rounded-sm px-2 py-1">
+                <div className="flex items-center gap-1.5">
+                  <ArrowDownToLine className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  <span className="text-[10px] text-muted-foreground truncate max-w-20">
+                    {t("tree.pickupPoint")}
+                  </span>
+                </div>
+                <span className="font-mono font-semibold text-green-700 dark:text-green-300 text-xs">
+                  {isSeparated
+                    ? `${data.facilityIndex! + 1}/${data.totalFacilities}`
+                    : `×${getPickupPointCount(node.targetRate)}`}
                 </span>
               </div>
             )}

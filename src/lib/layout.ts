@@ -32,7 +32,7 @@ let elkPromise: Promise<{
 }> | null = null;
 
 const NODE_DIMENSIONS = {
-  RAW_MATERIAL_NODE: { width: 208, height: 100 },
+  RAW_MATERIAL_NODE: { width: 208, height: 125 },
   PRODUCTION_NODE: { width: 208, height: 125 },
   PRODUCTION_NODE_PARTIAL: { width: 208, height: 157 },
   TARGET_NODE: { width: 208, height: 160 },
@@ -67,7 +67,11 @@ function getNodeDimensions(node: Node): { width: number; height: number } {
 
     // Check if it's a raw material node
     if (prodNode.data.productionNode.isRawMaterial) {
-      return NODE_DIMENSIONS.RAW_MATERIAL_NODE;
+      const isPartialLoad =
+        "isPartialLoad" in prodNode.data && prodNode.data.isPartialLoad;
+      return isPartialLoad
+        ? NODE_DIMENSIONS.PRODUCTION_NODE_PARTIAL
+        : NODE_DIMENSIONS.RAW_MATERIAL_NODE;
     }
 
     // Check if it's separated mode with partial load

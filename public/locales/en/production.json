@@ -39,6 +39,7 @@
     "target": "Target",
     "targetDescription": "Produce {{rate}} {{item}} per minute.",
     "targetRate": "Target rate",
+    "pickupPoint": "Pickup Point",
     "trueRawMaterial": "True raw material"
   }
 }

@@ -39,6 +39,7 @@
     "target": "ターゲット",
     "targetDescription": "毎分 {{item}} を {{rate}} 生産します。",
     "targetRate": "目標レート",
+    "pickupPoint": "取出口",
     "trueRawMaterial": "真の原材料"
   }
 }

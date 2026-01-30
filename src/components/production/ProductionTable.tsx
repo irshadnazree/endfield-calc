@@ -23,6 +23,7 @@ import { Switch } from "@/components/ui/switch";
 import type { Item, Recipe, Facility, ItemId, RecipeId } from "@/types";
 import { useTranslation } from "react-i18next";
 import { getFacilityName, getItemName } from "@/lib/i18n-helpers";
+import { getPickupPointCount } from "@/lib/utils";
 
 export type ProductionLineData = {
   item: Item;
@@ -409,7 +410,18 @@ const ProductionTable = memo(function ProductionTable({
 
                   {/* Facility count */}
                   <TableCell className="text-right font-mono text-sm tabular-nums p-2">
-                    {line.isRawMaterial || isManualRaw ? (
+                    {line.isRawMaterial ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="text-green-600 dark:text-green-400 cursor-help">
+                            {getPickupPointCount(line.outputRate)}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-xs">{t("tree.pickupPoint")}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : isManualRaw ? (
                       <span className="text-muted-foreground">-</span>
                     ) : (
                       formatNumber(line.facilityCount, 1)

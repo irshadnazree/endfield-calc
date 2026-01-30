@@ -12,3 +12,8 @@ export function cn(...inputs: ClassValue[]) {
  */
 export const calcRate = (amount: number, craftingTime: number): number =>
   (amount * 60) / craftingTime;
+
+export const TRANSPORT_BELT_CAPACITY = 30;
+
+export const getPickupPointCount = (demandRate: number): number =>
+  demandRate > 0 ? Math.ceil(demandRate / TRANSPORT_BELT_CAPACITY) : 0;
