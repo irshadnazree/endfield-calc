@@ -15,7 +15,11 @@ import {
   createTargetSinkNode,
 } from "../flow/flow-utils";
 import { createTargetSinkId, createPickupPointId } from "@/lib/node-keys";
-import { calcRate, getPickupPointCount, TRANSPORT_BELT_CAPACITY } from "@/lib/utils";
+import {
+  calcRate,
+  getPickupPointCount,
+  TRANSPORT_BELT_CAPACITY,
+} from "@/lib/utils";
 
 /**
  * Maps ProductionDependencyGraph to React Flow nodes and edges in separated mode.
@@ -36,14 +40,22 @@ export function mapPlanToFlowSeparated(
   const edges: Edge[] = [];
   let edgeIdCounter = 0;
 
+  // Pre-calculate which items are upstream (have consumers)
+  const upstreamItemIds = new Set<string>();
+  plan.edges.forEach((edge) => {
+    if (plan.nodes.get(edge.from)?.type === "item") {
+      upstreamItemIds.add(edge.from);
+    }
+  });
+
   // Create pools for all recipe nodes
   plan.nodes.forEach((node, nodeId) => {
     if (node.type === "recipe") {
       const outputItemId = plan.edges.find((e) => e.from === nodeId)?.to;
       const outputItemNode = outputItemId
         ? (plan.nodes.get(outputItemId) as
-          | Extract<ProductionGraphNode, { type: "item" }>
-          | undefined)
+            | Extract<ProductionGraphNode, { type: "item" }>
+            | undefined)
         : undefined;
 
       if (outputItemNode) {
@@ -131,7 +143,12 @@ export function mapPlanToFlowSeparated(
       remainingDemand -= allocated;
 
       edges.push(
-        createEdge(`e${edgeIdCounter++}`, pp.nodeId, consumerFacilityId, allocated),
+        createEdge(
+          `e${edgeIdCounter++}`,
+          pp.nodeId,
+          consumerFacilityId,
+          allocated,
+        ),
       );
     }
   }
@@ -188,8 +205,8 @@ export function mapPlanToFlowSeparated(
     const outputItemId = plan.edges.find((e) => e.from === recipeId)?.to;
     const outputItemNode = outputItemId
       ? (plan.nodes.get(outputItemId) as
-        | Extract<ProductionGraphNode, { type: "item" }>
-        | undefined)
+          | Extract<ProductionGraphNode, { type: "item" }>
+          | undefined)
       : undefined;
 
     if (!recipeNode || !outputItemNode) return;
@@ -248,7 +265,10 @@ export function mapPlanToFlowSeparated(
             const inputDemandRate =
               calcRate(input.amount, recipeNode.recipe.craftingTime) *
               (facilityInstance.actualOutputRate /
-                calcRate(recipeNode.recipe.outputs[0].amount, recipeNode.recipe.craftingTime));
+                calcRate(
+                  recipeNode.recipe.outputs[0].amount,
+                  recipeNode.recipe.craftingTime,
+                ));
 
             allocateUpstream(
               input.itemId,
@@ -267,8 +287,8 @@ export function mapPlanToFlowSeparated(
     const outputItemId = plan.edges.find((e) => e.from === nodeId)?.to;
     const outputItemNode = outputItemId
       ? (plan.nodes.get(outputItemId) as
-        | Extract<ProductionGraphNode, { type: "item" }>
-        | undefined)
+          | Extract<ProductionGraphNode, { type: "item" }>
+          | undefined)
       : undefined;
 
     if (!outputItemNode || outputItemNode.isTarget) return;
@@ -336,36 +356,119 @@ export function mapPlanToFlowSeparated(
 
     const producerRecipe = producerRecipeId
       ? (plan.nodes.get(producerRecipeId) as
-        | Extract<ProductionGraphNode, { type: "recipe" }>
-        | undefined)
+          | Extract<ProductionGraphNode, { type: "recipe" }>
+          | undefined)
       : undefined;
 
-    targetSinkNodes.push(
-      createTargetSinkNode(
-        targetSinkId,
-        node.item,
-        node.productionRate,
-        items,
-        facilities,
-        producerRecipe
-          ? {
-            facility: producerRecipe.facility,
-            facilityCount: producerRecipe.facilityCount,
-            recipe: producerRecipe.recipe,
-          }
-          : undefined,
-      ),
-    );
+    const isTerminalTarget = !upstreamItemIds.has(nodeId);
+    const shouldSplit =
+      isTerminalTarget &&
+      producerRecipe &&
+      producerRecipeId &&
+      producerRecipe.facilityCount > 1;
 
-    // Connect dependencies to target sink
-    if (producerRecipe) {
-      producerRecipe.recipe.inputs.forEach((input) => {
-        const inputDemandRate =
-          (input.amount / producerRecipe.recipe.outputs[0].amount) *
-          node.productionRate;
+    if (shouldSplit) {
+      // Split into individual facility nodes
+      const facilityInstances =
+        poolManager.getFacilityInstances(producerRecipeId);
 
-        allocateUpstream(input.itemId, inputDemandRate, targetSinkId);
+      facilityInstances.forEach((facilityInstance) => {
+        const isPartialLoad =
+          facilityInstance.actualOutputRate <
+          facilityInstance.maxOutputRate * 0.999;
+
+        flowNodes.push(
+          createProductionFlowNode(
+            facilityInstance.facilityId,
+            {
+              item: node.item,
+              targetRate: facilityInstance.actualOutputRate,
+              recipe: producerRecipe.recipe,
+              facility: producerRecipe.facility,
+              facilityCount: 1,
+              isRawMaterial: false,
+              isTarget: true,
+              dependencies: [],
+            },
+            items,
+            facilities,
+            {
+              facilityIndex: facilityInstance.facilityIndex,
+              totalFacilities: facilityInstances.length,
+              isPartialLoad,
+              isDirectTarget: true,
+              directTargetRate: facilityInstance.actualOutputRate,
+            },
+          ),
+        );
+
+        // Edge from facility to target sink
+        edges.push(
+          createEdge(
+            `e${edgeIdCounter++}`,
+            facilityInstance.facilityId,
+            targetSinkId,
+            facilityInstance.actualOutputRate,
+          ),
+        );
+
+        // Allocate upstream for this facility
+        producerRecipe.recipe.inputs.forEach((input) => {
+          const inputDemandRate =
+            calcRate(input.amount, producerRecipe.recipe.craftingTime) *
+            (facilityInstance.actualOutputRate /
+              calcRate(
+                producerRecipe.recipe.outputs[0].amount,
+                producerRecipe.recipe.craftingTime,
+              ));
+
+          allocateUpstream(
+            input.itemId,
+            inputDemandRate,
+            facilityInstance.facilityId,
+          );
+        });
       });
+
+      // Create target sink WITHOUT productionInfo (shown in facility nodes)
+      targetSinkNodes.push(
+        createTargetSinkNode(
+          targetSinkId,
+          node.item,
+          node.productionRate,
+          items,
+          facilities,
+          undefined,
+        ),
+      );
+    } else {
+      targetSinkNodes.push(
+        createTargetSinkNode(
+          targetSinkId,
+          node.item,
+          node.productionRate,
+          items,
+          facilities,
+          producerRecipe
+            ? {
+                facility: producerRecipe.facility,
+                facilityCount: producerRecipe.facilityCount,
+                recipe: producerRecipe.recipe,
+              }
+            : undefined,
+        ),
+      );
+
+      // Connect dependencies to target sink
+      if (producerRecipe) {
+        producerRecipe.recipe.inputs.forEach((input) => {
+          const inputDemandRate =
+            (input.amount / producerRecipe.recipe.outputs[0].amount) *
+            node.productionRate;
+
+          allocateUpstream(input.itemId, inputDemandRate, targetSinkId);
+        });
+      }
     }
   });
 
