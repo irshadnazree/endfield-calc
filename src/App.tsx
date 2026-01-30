@@ -8,6 +8,7 @@ import LeftPanel from "./components/panels/LeftPanel";
 import ProductionViewTabs from "./components/production/ProductionViewTabs";
 import AddTargetDialogGrid from "./components/panels/AddTargetDialogGrid";
 import AppFooter from "./components/layout/AppFooter";
+import { ThemeProvider } from "./components/ui/theme-provider";
 
 export default function App() {
   const { i18n } = useTranslation("app");
@@ -35,47 +36,49 @@ export default function App() {
   };
 
   return (
-    <TooltipProvider>
-      <div className="h-screen flex flex-col p-4 pb-0 gap-4">
-        <AppHeader onLanguageChange={handleLanguageChange} />
+    <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+      <TooltipProvider>
+        <div className="h-screen flex flex-col p-4 pb-0 gap-4">
+          <AppHeader onLanguageChange={handleLanguageChange} />
 
-        <div className="flex-1 flex gap-4 min-h-0">
-          <LeftPanel
-            targets={targets}
+          <div className="flex-1 flex gap-4 min-h-0">
+            <LeftPanel
+              targets={targets}
+              items={items}
+              facilities={facilities}
+              totalPowerConsumption={stats.totalPowerConsumption}
+              productionSteps={stats.uniqueProductionSteps}
+              rawMaterialCount={stats.rawMaterialRequirements.size}
+              facilityRequirements={stats.facilityRequirements}
+              error={error}
+              onTargetChange={handleTargetChange}
+              onTargetRemove={handleTargetRemove}
+              onAddClick={handleAddClick}
+            />
+
+            <ProductionViewTabs
+              plan={plan}
+              tableData={tableData}
+              items={items}
+              facilities={facilities}
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              onRecipeChange={handleRecipeChange}
+              onToggleRawMaterial={handleToggleRawMaterial}
+            />
+          </div>
+
+          <AddTargetDialogGrid
+            open={dialogOpen}
+            onOpenChange={setDialogOpen}
             items={items}
-            facilities={facilities}
-            totalPowerConsumption={stats.totalPowerConsumption}
-            productionSteps={stats.uniqueProductionSteps}
-            rawMaterialCount={stats.rawMaterialRequirements.size}
-            facilityRequirements={stats.facilityRequirements}
-            error={error}
-            onTargetChange={handleTargetChange}
-            onTargetRemove={handleTargetRemove}
-            onAddClick={handleAddClick}
+            existingTargetIds={targets.map((t) => t.itemId)}
+            onAddTarget={handleAddTarget}
           />
 
-          <ProductionViewTabs
-            plan={plan}
-            tableData={tableData}
-            items={items}
-            facilities={facilities}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            onRecipeChange={handleRecipeChange}
-            onToggleRawMaterial={handleToggleRawMaterial}
-          />
+          <AppFooter />
         </div>
-
-        <AddTargetDialogGrid
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          items={items}
-          existingTargetIds={targets.map((t) => t.itemId)}
-          onAddTarget={handleAddTarget}
-        />
-
-        <AppFooter />
-      </div>
-    </TooltipProvider>
+      </TooltipProvider>
+    </ThemeProvider>
   );
 }

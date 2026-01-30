@@ -12,8 +12,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTheme } from "../ui/theme-provider";
+import { MessageCircle, Sun, Moon } from "lucide-react";
 import { SiGithub, SiDiscord, SiTencentqq } from "react-icons/si";
 
 interface AppHeaderProps {
@@ -22,6 +23,7 @@ interface AppHeaderProps {
 
 export default function AppHeader({ onLanguageChange }: AppHeaderProps) {
   const { t, i18n } = useTranslation("app");
+  const { theme, setTheme } = useTheme();
 
   return (
     <div className="flex flex-col gap-2">
@@ -77,6 +79,20 @@ export default function AppHeader({ onLanguageChange }: AppHeaderProps) {
             <SiGithub className="h-4 w-4" />
             <span>GitHub</span>
           </a>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="h-9 w-9 p-0"
+            aria-label="Toggle theme"
+          >
+            {theme === "dark" ? (
+              <Sun className="h-4 w-4" />
+            ) : (
+              <Moon className="h-4 w-4" />
+            )}
+          </Button>
 
           {/* Language selector */}
           <Select value={i18n.language} onValueChange={onLanguageChange}>
