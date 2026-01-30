@@ -2,6 +2,7 @@
   "calculationError": "An error occurred during production plan calculation. Please check your targets and recipe overrides.",
   "footer": {
     "feedback": "Feedback & Suggestions:",
+    "trademark": "Arknights: Endfield is a trademark of Hypergryph. This tool is not affiliated with or endorsed by Hypergryph.",
     "unofficial": "Unofficial fan-made tool"
   },
   "header": {

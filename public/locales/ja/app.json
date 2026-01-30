@@ -2,6 +2,7 @@
   "calculationError": "生産計画の計算中にエラーが発生しました。目標とレシピの上書きを確認してください。",
   "footer": {
     "feedback": "フィードバック・ご提案:",
+    "trademark": "アークナイツ：エンドフィールドはHypergryphの商標です。本ツールはHypergryphとは無関係であり、公認されていません。",
     "unofficial": "非公式ファンメイドツール"
   },
   "header": {

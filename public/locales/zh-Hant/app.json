@@ -2,6 +2,7 @@
   "calculationError": "計算生產計畫時發生錯誤。請檢查您的目標產出和配方覆蓋設定。",
   "footer": {
     "feedback": "反饋與建議：",
+    "trademark": "明日方舟：終末地 是鷹角網絡的商標。本工具與鷹角網絡無關，未獲其認可。",
     "unofficial": "非官方粉絲工具"
   },
   "header": {

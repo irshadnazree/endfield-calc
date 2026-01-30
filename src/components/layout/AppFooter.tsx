@@ -32,6 +32,8 @@ export default function AppFooter() {
         </div>
         {/* Right section */}
         <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm">
+          <span>© 2025 JamboChen</span>
+          <span className="text-muted-foreground/60">•</span>
           <span className="flex items-center gap-1">
             <Scale className="h-3 w-3" />
             MIT License
@@ -41,6 +43,9 @@ export default function AppFooter() {
           <span className="text-muted-foreground/60">•</span>
           <span className="font-mono">{__APP_VERSION__}</span>
         </div>
+      </div>
+      <div className="text-xs text-muted-foreground/60 text-center pb-3">
+        {t("footer.trademark")}
       </div>
     </footer>
   );

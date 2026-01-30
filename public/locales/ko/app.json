@@ -2,6 +2,7 @@
   "calculationError": "생산 계획 계산 중 오류가 발생했습니다. 목표와 제조법 설정을 확인하세요.",
   "footer": {
     "feedback": "피드백 및 제안:",
+    "trademark": "명일방주: 엔드필드는 Hypergryph의 상표입니다. 이 도구는 Hypergryph와 관련이 없으며 공인되지 않았습니다.",
     "unofficial": "비공식 팬 제작 도구"
   },
   "header": {
