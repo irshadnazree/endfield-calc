@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -9,6 +10,7 @@ import ProductionViewTabs from "./components/production/ProductionViewTabs";
 import AddTargetDialogGrid from "./components/panels/AddTargetDialogGrid";
 import AppFooter from "./components/layout/AppFooter";
 import { ThemeProvider } from "./components/ui/theme-provider";
+import type { ItemId } from "./types";
 
 export default function App() {
   const { i18n } = useTranslation("app");
@@ -30,6 +32,11 @@ export default function App() {
     setDialogOpen,
     setActiveTab,
   } = useProductionPlan();
+
+  const targetRates = useMemo(
+    () => new Map(targets.map((t) => [t.itemId as ItemId, t.rate])),
+    [targets],
+  );
 
   const handleLanguageChange = (lang: string) => {
     i18n.changeLanguage(lang);
@@ -65,6 +72,7 @@ export default function App() {
               onTabChange={setActiveTab}
               onRecipeChange={handleRecipeChange}
               onToggleRawMaterial={handleToggleRawMaterial}
+              targetRates={targetRates}
             />
           </div>
 

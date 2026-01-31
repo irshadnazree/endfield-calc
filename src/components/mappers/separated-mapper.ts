@@ -29,6 +29,7 @@ export function mapPlanToFlowSeparated(
   plan: ProductionDependencyGraph,
   items: Item[],
   facilities: Facility[],
+  targetRates?: Map<ItemId, number>,
 ): { nodes: (FlowProductionNode | FlowTargetNode)[]; edges: Edge[] } {
   const poolManager = new CapacityPoolManager();
   const rawMaterialPickupPoints = new Map<
@@ -431,22 +432,26 @@ export function mapPlanToFlowSeparated(
       });
 
       // Create target sink WITHOUT productionInfo (shown in facility nodes)
+      const userTargetRateSplit =
+        targetRates?.get(node.itemId) ?? node.productionRate;
       targetSinkNodes.push(
         createTargetSinkNode(
           targetSinkId,
           node.item,
-          node.productionRate,
+          userTargetRateSplit,
           items,
           facilities,
           undefined,
         ),
       );
     } else {
+      const userTargetRate =
+        targetRates?.get(node.itemId) ?? node.productionRate;
       targetSinkNodes.push(
         createTargetSinkNode(
           targetSinkId,
           node.item,
-          node.productionRate,
+          userTargetRate,
           items,
           facilities,
           producerRecipe
@@ -460,14 +465,21 @@ export function mapPlanToFlowSeparated(
       );
 
       // Connect dependencies to target sink
-      if (producerRecipe) {
-        producerRecipe.recipe.inputs.forEach((input) => {
-          const inputDemandRate =
-            (input.amount / producerRecipe.recipe.outputs[0].amount) *
-            node.productionRate;
+      if (producerRecipe && producerRecipeId) {
+        if (isTerminalTarget) {
+          // Terminal target (single facility): connect recipe inputs directly
+          producerRecipe.recipe.inputs.forEach((input) => {
+            const inputDemandRate =
+              (input.amount / producerRecipe.recipe.outputs[0].amount) *
+              userTargetRate;
 
-          allocateUpstream(input.itemId, inputDemandRate, targetSinkId);
-        });
+            allocateUpstream(input.itemId, inputDemandRate, targetSinkId);
+          });
+        } else {
+          // Non-terminal target: allocate from producer recipe's pool
+          // so edges go from production facility → target sink
+          allocateFromPool(producerRecipeId, userTargetRate, targetSinkId);
+        }
       }
     }
   });

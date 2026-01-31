@@ -1,6 +1,7 @@
 import type { Node, Edge } from "@xyflow/react";
 import type {
   Item,
+  ItemId,
   Facility,
   ProductionDependencyGraph,
   ProductionGraphNode,
@@ -23,6 +24,7 @@ export function mapPlanToFlowMerged(
   plan: ProductionDependencyGraph,
   items: Item[],
   facilities: Facility[],
+  targetRates?: Map<ItemId, number>,
 ): { nodes: (FlowProductionNode | FlowTargetNode)[]; edges: Edge[] } {
   const flowNodes: Node<FlowNodeData>[] = [];
   const flowEdges: Edge[] = [];
@@ -72,7 +74,8 @@ export function mapPlanToFlowMerged(
             {
               isDirectTarget: outputItemNode.isTarget,
               directTargetRate: outputItemNode.isTarget
-                ? outputItemNode.productionRate
+                ? (targetRates?.get(outputItemNode.itemId) ??
+                    outputItemNode.productionRate)
                 : undefined,
             },
           ),
@@ -196,11 +199,14 @@ export function mapPlanToFlowMerged(
 
       const isTerminalTarget = !upstreamItemIds.has(nodeId);
 
+      const userTargetRate =
+        targetRates?.get(node.itemId) ?? node.productionRate;
+
       targetSinkNodes.push(
         createTargetSinkNode(
           targetNodeId,
           node.item,
-          node.productionRate,
+          userTargetRate,
           items,
           facilities,
           producerRecipe
@@ -220,7 +226,7 @@ export function mapPlanToFlowMerged(
             `e${edgeIdCounter++}`,
             producerRecipeId,
             targetNodeId,
-            node.productionRate,
+            userTargetRate,
           ),
         );
       }

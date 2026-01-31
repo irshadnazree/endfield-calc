@@ -12,6 +12,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import type {
   Item,
+  ItemId,
   Facility,
   FlowProductionNode,
   VisualizationMode,
@@ -31,6 +32,7 @@ type ProductionDependencyTreeProps = {
   items: Item[];
   facilities: Facility[];
   visualizationMode?: VisualizationMode;
+  targetRates?: Map<ItemId, number>;
 };
 
 /**
@@ -51,6 +53,7 @@ export default function ProductionDependencyTree({
   items,
   facilities,
   visualizationMode = "separated",
+  targetRates,
 }: ProductionDependencyTreeProps) {
   const { t } = useTranslation("production");
 
@@ -71,8 +74,8 @@ export default function ProductionDependencyTree({
       // Select mapper - now passes DAG structure instead of tree
       const flowData =
         visualizationMode === "separated"
-          ? mapPlanToFlowSeparated(plan, items, facilities)
-          : mapPlanToFlowMerged(plan, items, facilities);
+          ? mapPlanToFlowSeparated(plan, items, facilities, targetRates)
+          : mapPlanToFlowMerged(plan, items, facilities, targetRates);
 
       const { nodes: layoutedNodes, edges: layoutedEdges } =
         await getLayoutedElements(flowData.nodes, flowData.edges, "RIGHT");
@@ -90,7 +93,7 @@ export default function ProductionDependencyTree({
     return () => {
       isMounted = false;
     };
-  }, [plan, items, facilities, visualizationMode, setNodes, setEdges]);
+  }, [plan, items, facilities, visualizationMode, targetRates, setNodes, setEdges]);
 
   const nodeTypes: NodeTypes = useMemo(
     () => ({
