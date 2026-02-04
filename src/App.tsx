@@ -45,10 +45,10 @@ export default function App() {
   return (
     <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
       <TooltipProvider>
-        <div className="h-screen flex flex-col p-4 pb-0 gap-4">
+        <div className="min-h-[100svh] lg:h-screen flex flex-col p-4 pb-0 gap-4">
           <AppHeader onLanguageChange={handleLanguageChange} />
 
-          <div className="flex-1 flex gap-4 min-h-0">
+          <div className="flex flex-col lg:flex-row gap-3 lg:gap-4 min-h-0 lg:flex-1">
             <LeftPanel
               targets={targets}
               items={items}

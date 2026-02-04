@@ -265,7 +265,7 @@ const ProductionTable = memo(function ProductionTable({
 
   return (
     <div className="rounded-md border">
-      <Table>
+      <Table className="min-w-[760px]">
         <TableHeader>
           <TableRow className="hover:bg-transparent border-b-2">
             <TableHead className="h-8 w-52 bg-muted/30 font-semibold">

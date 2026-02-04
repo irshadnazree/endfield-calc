@@ -44,16 +44,16 @@ export default function ProductionViewTabs({
     useState<VisualizationMode>("merged");
 
   return (
-    <div className="flex-1 min-w-0">
+    <div className="min-w-0 lg:flex-1">
       <Card className="h-full flex flex-col">
         <CardHeader className="shrink-0">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Tabs
               value={activeTab}
               onValueChange={(val) => onTabChange(val as "table" | "tree")}
-              className="flex-1"
+              className="w-full sm:flex-1"
             >
-              <TabsList className="grid w-full max-w-md grid-cols-2">
+              <TabsList className="grid w-full sm:max-w-md grid-cols-2">
                 <TabsTrigger value="table" className="gap-2">
                   <BarChart3 className="h-4 w-4" />
                   <span>{t("tabs.table")}</span>
@@ -69,6 +69,7 @@ export default function ProductionViewTabs({
               <ToggleGroup
                 type="single"
                 value={visualizationMode}
+                className="flex-wrap justify-start sm:justify-end"
                 onValueChange={(value) => {
                   if (value) setVisualizationMode(value as VisualizationMode);
                 }}
