@@ -37,7 +37,7 @@ const TargetItemsGrid = memo(function TargetItemsGrid({
   };
 
   return (
-    <div className="grid grid-cols-3 gap-2">
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
       {/* 已有目标 */}
       {targets.map((target, index) => {
         const item = getItemById(target.itemId);

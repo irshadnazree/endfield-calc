@@ -48,7 +48,7 @@ const ProductionStats = memo(function ProductionStats({
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1">
                 <div className="text-xs text-muted-foreground">
                   {t("totalPower")}
@@ -81,7 +81,7 @@ const ProductionStats = memo(function ProductionStats({
             {facilityList.length > 0 && (
               <>
                 <Separator />
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {facilityList.map(({ facility, count }) => (
                     <div
                       key={facility.id}

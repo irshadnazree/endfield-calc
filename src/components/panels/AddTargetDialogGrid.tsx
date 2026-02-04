@@ -65,13 +65,13 @@ export default function AddTargetDialogGrid({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[80vw]! h-[85vh] flex flex-col">
+      <DialogContent className="max-w-[95vw]! sm:max-w-[80vw]! h-[90svh] sm:h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{t("title")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 flex-1 min-h-0 flex flex-col">
           {/* Search bar and default rate */}
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -110,7 +110,7 @@ export default function AddTargetDialogGrid({
                 </p>
               </div>
             ) : (
-              <div className="p-3 grid grid-cols-8 xl:grid-cols-10 gap-3">
+              <div className="p-3 grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-3">
                 {filteredItems.map((item) => (
                   <ItemButton
                     key={item.id}
