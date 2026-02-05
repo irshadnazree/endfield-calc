@@ -132,11 +132,13 @@ export function applyEdgeStyling(edges: Edge[], nodes: Node[]): Edge[] {
       labelBgPadding: [8, 4] as [number, number],
       labelBgBorderRadius: 4,
       labelBgStyle: {
-        fill: "#ffffff",
+        fill: "var(--card)",
         fillOpacity: 0.9,
       },
       labelStyle: {
         fontSize: 12,
+        fill: "var(--foreground)",
+        color: "var(--foreground)",
       },
     };
   });

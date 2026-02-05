@@ -75,7 +75,7 @@ export default function CustomBackwardEdge({
           >
             <div
               style={{
-                background: labelBgStyle?.fill || "#ffffff",
+                background: labelBgStyle?.fill || "var(--card)",
                 opacity: labelBgStyle?.fillOpacity || 0.9,
                 padding: `${labelBgPadding?.[1] || 4}px ${labelBgPadding?.[0] || 8}px`,
                 borderRadius: labelBgBorderRadius || 4,
