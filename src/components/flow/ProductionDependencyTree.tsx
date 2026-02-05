@@ -122,6 +122,7 @@ export default function ProductionDependencyTree({
     <div className="h-full w-full flex flex-col">
       <div className="flex-1">
         <ReactFlow
+          className="flow-theme"
           nodes={nodes}
           edges={edges}
           onNodesChange={onNodesChange}
@@ -137,7 +138,16 @@ export default function ProductionDependencyTree({
           proOptions={{ hideAttribution: true }}
         >
           <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
-          <Controls />
+          <Controls
+            className="flow-controls"
+            style={{
+              background: "var(--card)",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius)",
+              boxShadow: "0 1px 2px oklch(0 0 0 / 0.12)",
+              overflow: "hidden",
+            }}
+          />
         </ReactFlow>
       </div>
     </div>

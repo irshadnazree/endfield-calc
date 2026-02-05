@@ -118,3 +118,19 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  .flow-theme {
+    --xy-controls-button-background-color: var(--card);
+    --xy-controls-button-color: var(--foreground);
+    --xy-controls-button-border-color: var(--border);
+    --xy-controls-button-background-color-hover: var(--accent);
+    --xy-controls-button-color-hover: var(--accent-foreground);
+    --xy-controls-box-shadow: 0 1px 2px oklch(0 0 0 / 0.12);
+  }
+
+  .flow-controls .react-flow__controls-button:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: -2px;
+  }
+}
