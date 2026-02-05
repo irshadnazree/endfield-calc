@@ -2,7 +2,7 @@ import { calculateProductionPlan } from "@/lib/calculator";
 import { items, recipes, facilities } from "@/data";
 import { useState, useMemo, useCallback } from "react";
 import type { ProductionTarget } from "@/components/panels/TargetItemsGrid";
-import type { ItemId, RecipeId } from "@/types";
+import type { ItemId, RecipeId, ProductionDependencyGraph, ProductionGraphNode } from "@/types";
 import { useTranslation } from "react-i18next";
 import { useProductionStats } from "./useProductionStats";
 import { useProductionTable } from "./useProductionTable";
@@ -19,6 +19,7 @@ export function useProductionPlan() {
   const [manualRawMaterials, setManualRawMaterials] = useState<Set<ItemId>>(
     new Set(),
   );
+  const [ceilMode, setCeilMode] = useState(false);
 
   // Core calculation: only returns dependency tree and cycles
   const { plan, error } = useMemo(() => {
@@ -43,10 +44,24 @@ export function useProductionPlan() {
     return { plan, error };
   }, [targets, recipeOverrides, manualRawMaterials, t]);
 
+  // Derive ceiled plan when ceilMode is on
+  const displayPlan = useMemo(() => {
+    if (!plan || !ceilMode) return plan;
+    const ceiledNodes = new Map<string, ProductionGraphNode>();
+    for (const [key, node] of plan.nodes) {
+      if (node.type === "recipe") {
+        ceiledNodes.set(key, { ...node, facilityCount: Math.ceil(node.facilityCount) });
+      } else {
+        ceiledNodes.set(key, node);
+      }
+    }
+    return { ...plan, nodes: ceiledNodes } as ProductionDependencyGraph;
+  }, [plan, ceilMode]);
+
   // View-specific data: computed in view layer hooks
-  const stats = useProductionStats(plan, manualRawMaterials);
+  const stats = useProductionStats(displayPlan, manualRawMaterials);
   const tableData = useProductionTable(
-    plan,
+    displayPlan,
     recipes,
     recipeOverrides,
     manualRawMaterials,
@@ -104,10 +119,12 @@ export function useProductionPlan() {
     setDialogOpen,
     activeTab,
     setActiveTab,
-    plan,
+    plan: displayPlan,
     tableData,
     stats,
     error,
+    ceilMode,
+    setCeilMode,
     handleTargetChange,
     handleTargetRemove,
     handleAddTarget,

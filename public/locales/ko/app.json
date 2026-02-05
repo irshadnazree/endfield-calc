@@ -1,4 +1,5 @@
 {
+  "ceilMode": "시설 수 올림",
   "calculationError": "생산 계획 계산 중 오류가 발생했습니다. 목표와 제조법 설정을 확인하세요.",
   "footer": {
     "feedback": "피드백 및 제안:",

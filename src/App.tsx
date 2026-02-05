@@ -31,6 +31,8 @@ export default function App() {
     handleAddClick,
     setDialogOpen,
     setActiveTab,
+    ceilMode,
+    setCeilMode,
   } = useProductionPlan();
 
   const targetRates = useMemo(
@@ -73,6 +75,8 @@ export default function App() {
               onRecipeChange={handleRecipeChange}
               onToggleRawMaterial={handleToggleRawMaterial}
               targetRates={targetRates}
+              ceilMode={ceilMode}
+              onCeilModeChange={setCeilMode}
             />
           </div>
 

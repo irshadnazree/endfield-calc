@@ -1,4 +1,5 @@
 {
+  "ceilMode": "设施数向上取整",
   "calculationError": "计算生产计划时发生错误。请检查您的目标产出和配方覆盖设置。",
   "footer": {
     "feedback": "反馈与建议：",

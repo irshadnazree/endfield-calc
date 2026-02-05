@@ -1,4 +1,5 @@
 {
+  "ceilMode": "設施數向上取整",
   "calculationError": "計算生產計畫時發生錯誤。請檢查您的目標產出和配方覆蓋設定。",
   "footer": {
     "feedback": "反饋與建議：",

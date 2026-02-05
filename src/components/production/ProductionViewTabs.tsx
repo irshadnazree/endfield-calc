@@ -6,6 +6,8 @@ import ProductionDependencyTree from "../flow/ProductionDependencyTree";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import type {
   ItemId,
   RecipeId,
@@ -26,6 +28,8 @@ interface ProductionViewTabsProps {
   onRecipeChange: (itemId: ItemId, recipeId: RecipeId) => void;
   onToggleRawMaterial: (itemId: ItemId) => void;
   targetRates?: Map<ItemId, number>;
+  ceilMode: boolean;
+  onCeilModeChange: (value: boolean) => void;
 }
 
 export default function ProductionViewTabs({
@@ -38,6 +42,8 @@ export default function ProductionViewTabs({
   onRecipeChange,
   onToggleRawMaterial,
   targetRates,
+  ceilMode,
+  onCeilModeChange,
 }: ProductionViewTabsProps) {
   const { t } = useTranslation("app");
   const [visualizationMode, setVisualizationMode] =
@@ -64,6 +70,17 @@ export default function ProductionViewTabs({
                 </TabsTrigger>
               </TabsList>
             </Tabs>
+
+            <div className="flex items-center gap-2">
+              <Switch
+                id="ceil-mode"
+                checked={ceilMode}
+                onCheckedChange={onCeilModeChange}
+              />
+              <Label htmlFor="ceil-mode" className="text-xs whitespace-nowrap cursor-pointer">
+                {t("ceilMode")}
+              </Label>
+            </div>
 
             {activeTab === "tree" && (
               <ToggleGroup

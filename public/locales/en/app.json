@@ -1,4 +1,5 @@
 {
+  "ceilMode": "Round up facilities",
   "calculationError": "An error occurred during production plan calculation. Please check your targets and recipe overrides.",
   "footer": {
     "feedback": "Feedback & Suggestions:",

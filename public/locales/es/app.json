@@ -1,4 +1,5 @@
 {
+  "ceilMode": "Redondear instalaciones",
   "calculationError": "Ocurrió un error durante el cálculo del plan de producción. Por favor, revisa tus objetivos y las configuraciones de recetas.",
   "footer": {
     "feedback": "Comentarios y sugerencias:",
